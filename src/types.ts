@@ -79,6 +79,22 @@ export interface BigRoadCell {
   isDragon7Push: boolean;
 }
 
+export interface ShoeRecord {
+  shoeNumber: number;
+  seed: string;
+  totalHands: number;
+  aProfit: number;
+  bProfit: number;
+  bankerWins: number;
+  playerWins: number;
+  ties: number;
+  dragon7Count: number;
+  panda8Count: number;
+  aBankrollEnd: number;
+  bBankrollEnd: number;
+  timestamp: number;
+}
+
 export interface GameSettings {
   cutCardDepth: number; // Default 26
   bChaseBet: number; // Default 200 (Player B normal chase bet amount)

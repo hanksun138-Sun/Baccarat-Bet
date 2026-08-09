@@ -14,6 +14,7 @@ import {
   PlayerBet,
   PlayerBBet,
   PlayerBState,
+  ShoeRecord,
 } from './types';
 import {
   calculateHandScore,
@@ -75,6 +76,7 @@ export default function App() {
 
   // History & Statistics
   const [handResults, setHandResults] = useState<HandResult[]>([]);
+  const [shoeHistory, setShoeHistory] = useState<ShoeRecord[]>([]);
   const [stats, setStats] = useState<GameStats>({
     aTotalHandsBet: 0,
     aTotalWins: 0,
@@ -108,6 +110,7 @@ export default function App() {
         if (parsed.stats) setStats(parsed.stats);
         if (parsed.settings) setSettings(parsed.settings);
         if (parsed.handResults) setHandResults(parsed.handResults);
+        if (parsed.shoeHistory) setShoeHistory(parsed.shoeHistory);
         if (parsed.totalHandCount) setTotalHandCount(parsed.totalHandCount);
       } catch (e) {
         console.error('Failed to parse saved session:', e);
@@ -118,7 +121,7 @@ export default function App() {
 
   // Save session state to localStorage on update
   useEffect(() => {
-    if (totalHandCount > 0) {
+    if (totalHandCount > 0 || shoeHistory.length > 0) {
       const stateToSave = {
         aBankroll,
         bBankroll,
@@ -126,11 +129,12 @@ export default function App() {
         stats,
         settings,
         handResults,
+        shoeHistory,
         totalHandCount,
       };
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(stateToSave));
     }
-  }, [aBankroll, bBankroll, bState, stats, settings, handResults, totalHandCount]);
+  }, [aBankroll, bBankroll, bState, stats, settings, handResults, shoeHistory, totalHandCount]);
 
   // Initialize a new shoe (Shuffle + Burn)
   const initializeShoe = (seedStr: string) => {
@@ -160,6 +164,35 @@ export default function App() {
 
   // Handle New Shoe
   const handleNewShoe = () => {
+    // Archive current shoe results into shoeHistory if hands were played
+    if (handResults.length > 0) {
+      const aProfit = handResults.reduce((sum, h) => sum + h.aNetProfit, 0);
+      const bProfit = handResults.reduce((sum, h) => sum + h.bNetProfit, 0);
+      const bankerWins = handResults.filter((h) => h.winner === 'BANKER').length;
+      const playerWins = handResults.filter((h) => h.winner === 'PLAYER').length;
+      const ties = handResults.filter((h) => h.winner === 'TIE').length;
+      const dragon7Count = handResults.filter((h) => h.isDragon7).length;
+      const panda8Count = handResults.filter((h) => h.isPanda8).length;
+
+      const record: ShoeRecord = {
+        shoeNumber: shoeHistory.length + 1,
+        seed: settings.prngSeed,
+        totalHands: handResults.length,
+        aProfit,
+        bProfit,
+        bankerWins,
+        playerWins,
+        ties,
+        dragon7Count,
+        panda8Count,
+        aBankrollEnd: aBankroll,
+        bBankrollEnd: bBankroll,
+        timestamp: Date.now(),
+      };
+
+      setShoeHistory((prev) => [...prev, record]);
+    }
+
     const newSeed = Date.now().toString();
     setSettings((prev) => ({ ...prev, prngSeed: newSeed }));
     initializeShoe(newSeed);
@@ -203,6 +236,7 @@ export default function App() {
         bMaxDrawdown: 0,
       });
       setHandResults([]);
+      setShoeHistory([]);
       setTotalHandCount(0);
       handleNewShoe();
     }
@@ -596,6 +630,7 @@ export default function App() {
             stats={stats}
             bState={bState}
             handResults={handResults}
+            shoeHistory={shoeHistory}
             aBankroll={aBankroll}
             bBankroll={bBankroll}
             onResetSession={handleResetSession}
