@@ -163,6 +163,7 @@ export default function App() {
     const newSeed = Date.now().toString();
     setSettings((prev) => ({ ...prev, prngSeed: newSeed }));
     initializeShoe(newSeed);
+    setHandResults([]); // 清空路单，新牌靴从第1手重新记录大路
   };
 
   // Handle Global Session Reset

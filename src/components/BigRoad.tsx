@@ -24,7 +24,7 @@ export const BigRoad: React.FC<BigRoadProps> = ({ handResults }) => {
   // Calculate Big Road cells
   const bigCells: BigRoadCell[] = buildBigRoad(handResults);
   const maxBigCol = bigCells.reduce((max, c) => Math.max(max, c.col), 0);
-  const totalBigCols = Math.max(maxBigCol + 1, 20);
+  const totalBigCols = Math.max(maxBigCol + 1, 14);
 
   // Map Big Road cells
   const bigCellMap = new Map<string, BigRoadCell>();
@@ -42,7 +42,7 @@ export const BigRoad: React.FC<BigRoadProps> = ({ handResults }) => {
     isPanda8: hand.isPanda8,
   }));
   const maxBeadCol = beadCells.reduce((max, c) => Math.max(max, c.col), 0);
-  const totalBeadCols = Math.max(maxBeadCol + 1, 16);
+  const totalBeadCols = Math.max(maxBeadCol + 1, 14);
 
   const beadCellMap = new Map<string, BeadRoadCell>();
   beadCells.forEach((c) => {
@@ -150,10 +150,10 @@ export const BigRoad: React.FC<BigRoadProps> = ({ handResults }) => {
               className="w-full overflow-x-auto custom-scrollbar p-2.5 sm:p-3 bg-black/85 rounded-xl border border-[#b8860b]/40 shadow-inner"
             >
               <div
-                className="grid gap-1 min-w-[480px] select-none"
+                className="grid gap-1 select-none w-full"
                 style={{
-                  gridTemplateColumns: `repeat(${totalBigCols}, minmax(28px, 1fr))`,
-                  gridTemplateRows: `repeat(6, 28px)`,
+                  gridTemplateColumns: `repeat(${totalBigCols}, minmax(24px, 1fr))`,
+                  gridTemplateRows: `repeat(6, 26px)`,
                 }}
               >
                 {Array.from({ length: 6 }).map((_, r) => (
@@ -166,7 +166,7 @@ export const BigRoad: React.FC<BigRoadProps> = ({ handResults }) => {
                         <div
                           key={`big_${cellKey}`}
                           style={{ gridRowStart: r + 1, gridColumnStart: c + 1 }}
-                          className="w-7 h-7 rounded border border-white/10 bg-black/50 flex items-center justify-center relative overflow-visible"
+                          className="w-full h-6 rounded border border-white/10 bg-black/50 flex items-center justify-center relative overflow-visible"
                         >
                           {cell && (
                             <div className="relative w-6 h-6 flex items-center justify-center">
@@ -225,10 +225,10 @@ export const BigRoad: React.FC<BigRoadProps> = ({ handResults }) => {
               className="w-full overflow-x-auto custom-scrollbar p-2.5 sm:p-3 bg-black/85 rounded-xl border border-[#b8860b]/40 shadow-inner"
             >
               <div
-                className="grid gap-1 min-w-[480px] select-none"
+                className="grid gap-1 select-none w-full"
                 style={{
-                  gridTemplateColumns: `repeat(${totalBeadCols}, minmax(28px, 1fr))`,
-                  gridTemplateRows: `repeat(6, 28px)`,
+                  gridTemplateColumns: `repeat(${totalBeadCols}, minmax(24px, 1fr))`,
+                  gridTemplateRows: `repeat(6, 26px)`,
                 }}
               >
                 {Array.from({ length: 6 }).map((_, r) => (
@@ -241,7 +241,7 @@ export const BigRoad: React.FC<BigRoadProps> = ({ handResults }) => {
                         <div
                           key={`bead_${cellKey}`}
                           style={{ gridRowStart: r + 1, gridColumnStart: c + 1 }}
-                          className="w-7 h-7 rounded border border-white/10 bg-black/50 flex items-center justify-center relative overflow-visible"
+                          className="w-full h-6 rounded border border-white/10 bg-black/50 flex items-center justify-center relative overflow-visible"
                         >
                           {cell && (
                             <div
