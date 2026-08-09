@@ -1,0 +1,6 @@
+{
+  "name": "传统百家乐双人对战",
+  "description": "模拟双人传统百家乐对战桌面，具备真实免佣补牌规则、龙7/猫8旁注、玩家B追打状态机、大路图及资金统计分析。",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
