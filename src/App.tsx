@@ -541,9 +541,10 @@ export default function App() {
           </div>
         </header>
 
-        {/* iPad-Optimized Main Screen: Unified Cards + Operation Console & Road Maps & Player B Status */}
+        {/* iPad/Desktop Main Screen Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-5">
-          <div className="lg:col-span-2 space-y-4">
+          {/* Main Gaming Table */}
+          <div className="lg:col-span-2">
             <TableFelt
               playerCards={playerCards}
               bankerCards={bankerCards}
@@ -568,8 +569,10 @@ export default function App() {
               onOpenRecharge={() => setRechargePlayer('A')}
               onOpenSettings={() => setIsSettingsOpen(true)}
             />
+          </div>
 
-            {/* Player B Chase Status Panel */}
+          {/* Player B Status Panel */}
+          <div className="lg:col-span-1">
             <PlayerBStatus
               bBankroll={bBankroll}
               bState={bState}
@@ -581,8 +584,8 @@ export default function App() {
             />
           </div>
 
-          <div className="lg:col-span-1">
-            {/* Road Maps (大路 & 珠盘路走势) */}
+          {/* Road Maps (大路 on top, 珠盘路 below) - Full Width */}
+          <div className="lg:col-span-3">
             <BigRoad handResults={handResults} />
           </div>
         </div>
