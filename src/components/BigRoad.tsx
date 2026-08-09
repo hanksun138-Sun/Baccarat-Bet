@@ -56,14 +56,17 @@ export const BigRoad: React.FC<BigRoadProps> = ({ handResults }) => {
   const dragon7Count = handResults.filter((h) => h.isDragon7).length;
   const panda8Count = handResults.filter((h) => h.isPanda8).length;
 
-  // Auto scroll to right on update
+  // Auto scroll to rightmost (newest) columns on update
   useEffect(() => {
-    if (bigContainerRef.current) {
-      bigContainerRef.current.scrollLeft = bigContainerRef.current.scrollWidth;
-    }
-    if (beadContainerRef.current) {
-      beadContainerRef.current.scrollLeft = beadContainerRef.current.scrollWidth;
-    }
+    const timer = setTimeout(() => {
+      if (bigContainerRef.current) {
+        bigContainerRef.current.scrollLeft = bigContainerRef.current.scrollWidth;
+      }
+      if (beadContainerRef.current) {
+        beadContainerRef.current.scrollLeft = beadContainerRef.current.scrollWidth;
+      }
+    }, 50);
+    return () => clearTimeout(timer);
   }, [handResults.length, bigCells.length, beadCells.length, activeTab]);
 
   return (
@@ -79,7 +82,7 @@ export const BigRoad: React.FC<BigRoadProps> = ({ handResults }) => {
                 activeTab === 'both' ? 'bg-[#d4af37] text-black shadow' : 'text-amber-200/70 hover:text-white'
               }`}
             >
-              全景 (大路+珠盘)
+              全景
             </button>
             <button
               onClick={() => setActiveTab('big')}
@@ -134,7 +137,7 @@ export const BigRoad: React.FC<BigRoadProps> = ({ handResults }) => {
       </div>
 
       {/* Road Map Display Grids */}
-      <div className="space-y-2.5">
+      <div className="space-y-3">
         {/* BIG ROAD (大路) */}
         {(activeTab === 'both' || activeTab === 'big') && (
           <div>
@@ -144,10 +147,10 @@ export const BigRoad: React.FC<BigRoadProps> = ({ handResults }) => {
             </div>
             <div
               ref={bigContainerRef}
-              className="w-full overflow-x-auto custom-scrollbar p-1.5 bg-black/75 rounded-lg border border-[#b8860b]/30"
+              className="w-full overflow-x-auto custom-scrollbar p-2.5 sm:p-3 bg-black/85 rounded-xl border border-[#b8860b]/40 shadow-inner"
             >
               <div
-                className="grid gap-1 min-w-[500px] select-none"
+                className="grid gap-1 min-w-[480px] select-none"
                 style={{
                   gridTemplateColumns: `repeat(${totalBigCols}, minmax(28px, 1fr))`,
                   gridTemplateRows: `repeat(6, 28px)`,
@@ -163,21 +166,21 @@ export const BigRoad: React.FC<BigRoadProps> = ({ handResults }) => {
                         <div
                           key={`big_${cellKey}`}
                           style={{ gridRowStart: r + 1, gridColumnStart: c + 1 }}
-                          className="w-7 h-7 rounded border border-white/5 bg-black/40 flex items-center justify-center relative"
+                          className="w-7 h-7 rounded border border-white/10 bg-black/50 flex items-center justify-center relative overflow-visible"
                         >
                           {cell && (
-                            <div className="relative w-5 h-5 flex items-center justify-center">
+                            <div className="relative w-6 h-6 flex items-center justify-center">
                               {/* Circle Ring Outcome */}
                               <div
-                                className={`w-4.5 h-4.5 rounded-full border-2 flex items-center justify-center font-mono font-bold text-[9px] ${
+                                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center font-mono font-bold text-[9px] ${
                                   cell.winner === 'BANKER'
-                                    ? 'border-red-500 text-red-400 bg-red-950/60 shadow-[0_0_5px_rgba(239,68,68,0.5)]'
+                                    ? 'border-red-500 text-red-400 bg-red-950/80 shadow-[0_0_6px_rgba(239,68,68,0.6)]'
                                     : cell.winner === 'PLAYER'
-                                    ? 'border-blue-500 text-blue-400 bg-blue-950/60 shadow-[0_0_5px_rgba(59,130,246,0.5)]'
-                                    : 'border-emerald-500 text-emerald-400 bg-emerald-950/60 shadow-[0_0_5px_rgba(52,211,153,0.5)]'
+                                    ? 'border-blue-500 text-blue-400 bg-blue-950/80 shadow-[0_0_6px_rgba(59,130,246,0.6)]'
+                                    : 'border-emerald-500 text-emerald-400 bg-emerald-950/80 shadow-[0_0_6px_rgba(52,211,153,0.6)]'
                                 }`}
                               >
-                                {cell.ties > 0 && <span className="text-[8px] text-emerald-400">{cell.ties}</span>}
+                                {cell.ties > 0 && <span className="text-[8px] text-emerald-400 font-black">{cell.ties}</span>}
                               </div>
 
                               {/* Tie Green Slash Line */}
@@ -189,12 +192,12 @@ export const BigRoad: React.FC<BigRoadProps> = ({ handResults }) => {
 
                               {/* Dragon 7 / Panda 8 Badges */}
                               {cell.isDragon7 && (
-                                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[#d4af37] border border-black flex items-center justify-center text-[7px] text-black font-black" title="龙7">
+                                <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-[#d4af37] border border-black flex items-center justify-center text-[7px] text-black font-black" title="龙7">
                                   D
                                 </span>
                               )}
                               {cell.isPanda8 && (
-                                <span className="absolute -bottom-1 -right-1 w-2.5 h-2.5 rounded-full bg-blue-400 border border-black flex items-center justify-center text-[7px] text-black font-black" title="猫8">
+                                <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-blue-400 border border-black flex items-center justify-center text-[7px] text-black font-black" title="猫8">
                                   P
                                 </span>
                               )}
@@ -219,10 +222,10 @@ export const BigRoad: React.FC<BigRoadProps> = ({ handResults }) => {
             </div>
             <div
               ref={beadContainerRef}
-              className="w-full overflow-x-auto custom-scrollbar p-1.5 bg-black/75 rounded-lg border border-[#b8860b]/30"
+              className="w-full overflow-x-auto custom-scrollbar p-2.5 sm:p-3 bg-black/85 rounded-xl border border-[#b8860b]/40 shadow-inner"
             >
               <div
-                className="grid gap-1 min-w-[500px] select-none"
+                className="grid gap-1 min-w-[480px] select-none"
                 style={{
                   gridTemplateColumns: `repeat(${totalBeadCols}, minmax(28px, 1fr))`,
                   gridTemplateRows: `repeat(6, 28px)`,
@@ -238,7 +241,7 @@ export const BigRoad: React.FC<BigRoadProps> = ({ handResults }) => {
                         <div
                           key={`bead_${cellKey}`}
                           style={{ gridRowStart: r + 1, gridColumnStart: c + 1 }}
-                          className="w-7 h-7 rounded border border-white/5 bg-black/40 flex items-center justify-center relative"
+                          className="w-7 h-7 rounded border border-white/10 bg-black/50 flex items-center justify-center relative overflow-visible"
                         >
                           {cell && (
                             <div
