@@ -541,38 +541,45 @@ export default function App() {
           </div>
         </header>
 
-        {/* Main Screen Layout: Table -> Road Maps -> Player B Status -> Stats */}
+        {/* Main Screen Layout: iPad Top Screen (60% Table + 40% Road Maps) -> Below: Player B Status & Stats */}
         <div className="space-y-4 md:space-y-5">
-          {/* 1. Main Gaming Table (桌面发牌区) */}
-          <TableFelt
-            playerCards={playerCards}
-            bankerCards={bankerCards}
-            playerScore={calculateHandScore(playerCards)}
-            bankerScore={calculateHandScore(bankerCards)}
-            isDealing={isDealing}
-            lastHandResult={lastHandResult}
-            aBet={aBet}
-            bBet={getCurrentBBet()}
-            burnCard={burnCard}
-            burnedCount={burnedCount}
-            remainingCards={shoe.length}
-            totalCards={416}
-            aBankroll={aBankroll}
-            aCumulativeProfit={handResults.length > 0 ? (handResults[handResults.length - 1].aCumulativeProfit ?? 0) : 0}
-            enableSideBets={settings.aEnableSideBets}
-            sideBetAmount={settings.sideBetAmount}
-            onDeal={handleDealNextHand}
-            onUpdateBet={setABet}
-            onNewShoe={handleNewShoe}
-            onResetSession={handleResetSession}
-            onOpenRecharge={() => setRechargePlayer('A')}
-            onOpenSettings={() => setIsSettingsOpen(true)}
-          />
+          {/* iPad Top Screen Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 md:gap-5 items-start">
+            {/* Left ~60%: Main Gaming Table (桌面发牌主画面) */}
+            <div className="lg:col-span-3">
+              <TableFelt
+                playerCards={playerCards}
+                bankerCards={bankerCards}
+                playerScore={calculateHandScore(playerCards)}
+                bankerScore={calculateHandScore(bankerCards)}
+                isDealing={isDealing}
+                lastHandResult={lastHandResult}
+                aBet={aBet}
+                bBet={getCurrentBBet()}
+                burnCard={burnCard}
+                burnedCount={burnedCount}
+                remainingCards={shoe.length}
+                totalCards={416}
+                aBankroll={aBankroll}
+                aCumulativeProfit={handResults.length > 0 ? (handResults[handResults.length - 1].aCumulativeProfit ?? 0) : 0}
+                enableSideBets={settings.aEnableSideBets}
+                sideBetAmount={settings.sideBetAmount}
+                onDeal={handleDealNextHand}
+                onUpdateBet={setABet}
+                onNewShoe={handleNewShoe}
+                onResetSession={handleResetSession}
+                onOpenRecharge={() => setRechargePlayer('A')}
+                onOpenSettings={() => setIsSettingsOpen(true)}
+              />
+            </div>
 
-          {/* 2. Road Maps (走势路单: 大路在上方, 珠盘路在下方) */}
-          <BigRoad handResults={handResults} />
+            {/* Right ~40%: Road Maps (走势路单: 大路在上方, 珠盘路在下方) */}
+            <div className="lg:col-span-2">
+              <BigRoad handResults={handResults} />
+            </div>
+          </div>
 
-          {/* 3. Player B Status Panel (玩家B追打区) */}
+          {/* Below Main iPad View: Player B Status Panel (玩家B追打区) */}
           <PlayerBStatus
             bBankroll={bBankroll}
             bState={bState}
@@ -583,7 +590,7 @@ export default function App() {
             onChangeChaseBetAmount={(amt) => setSettings((prev) => ({ ...prev, bChaseBet: amt }))}
           />
 
-          {/* 4. Statistics & Bankroll Curve (统计与数据) */}
+          {/* Below Main iPad View: Statistics & Bankroll Curve (统计与数据) */}
           <StatsPanel
             stats={stats}
             bState={bState}
