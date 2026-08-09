@@ -541,64 +541,58 @@ export default function App() {
           </div>
         </header>
 
-        {/* iPad/Desktop Main Screen Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-5">
-          {/* Main Gaming Table */}
-          <div className="lg:col-span-2">
-            <TableFelt
-              playerCards={playerCards}
-              bankerCards={bankerCards}
-              playerScore={calculateHandScore(playerCards)}
-              bankerScore={calculateHandScore(bankerCards)}
-              isDealing={isDealing}
-              lastHandResult={lastHandResult}
-              aBet={aBet}
-              bBet={getCurrentBBet()}
-              burnCard={burnCard}
-              burnedCount={burnedCount}
-              remainingCards={shoe.length}
-              totalCards={416}
-              aBankroll={aBankroll}
-              aCumulativeProfit={handResults.length > 0 ? (handResults[handResults.length - 1].aCumulativeProfit ?? 0) : 0}
-              enableSideBets={settings.aEnableSideBets}
-              sideBetAmount={settings.sideBetAmount}
-              onDeal={handleDealNextHand}
-              onUpdateBet={setABet}
-              onNewShoe={handleNewShoe}
-              onResetSession={handleResetSession}
-              onOpenRecharge={() => setRechargePlayer('A')}
-              onOpenSettings={() => setIsSettingsOpen(true)}
-            />
-          </div>
+        {/* Main Screen Layout: Table -> Road Maps -> Player B Status -> Stats */}
+        <div className="space-y-4 md:space-y-5">
+          {/* 1. Main Gaming Table (桌面发牌区) */}
+          <TableFelt
+            playerCards={playerCards}
+            bankerCards={bankerCards}
+            playerScore={calculateHandScore(playerCards)}
+            bankerScore={calculateHandScore(bankerCards)}
+            isDealing={isDealing}
+            lastHandResult={lastHandResult}
+            aBet={aBet}
+            bBet={getCurrentBBet()}
+            burnCard={burnCard}
+            burnedCount={burnedCount}
+            remainingCards={shoe.length}
+            totalCards={416}
+            aBankroll={aBankroll}
+            aCumulativeProfit={handResults.length > 0 ? (handResults[handResults.length - 1].aCumulativeProfit ?? 0) : 0}
+            enableSideBets={settings.aEnableSideBets}
+            sideBetAmount={settings.sideBetAmount}
+            onDeal={handleDealNextHand}
+            onUpdateBet={setABet}
+            onNewShoe={handleNewShoe}
+            onResetSession={handleResetSession}
+            onOpenRecharge={() => setRechargePlayer('A')}
+            onOpenSettings={() => setIsSettingsOpen(true)}
+          />
 
-          {/* Player B Status Panel */}
-          <div className="lg:col-span-1">
-            <PlayerBStatus
-              bBankroll={bBankroll}
-              bState={bState}
-              bCurrentBet={getCurrentBBet()}
-              currentChaseBetAmount={currentChaseAmount}
-              aIsExhausted={aBankroll === 0}
-              onOpenRechargeB={() => setRechargePlayer('B')}
-              onChangeChaseBetAmount={(amt) => setSettings((prev) => ({ ...prev, bChaseBet: amt }))}
-            />
-          </div>
+          {/* 2. Road Maps (走势路单: 大路在上方, 珠盘路在下方) */}
+          <BigRoad handResults={handResults} />
 
-          {/* Road Maps (大路 on top, 珠盘路 below) - Full Width */}
-          <div className="lg:col-span-3">
-            <BigRoad handResults={handResults} />
-          </div>
+          {/* 3. Player B Status Panel (玩家B追打区) */}
+          <PlayerBStatus
+            bBankroll={bBankroll}
+            bState={bState}
+            bCurrentBet={getCurrentBBet()}
+            currentChaseBetAmount={currentChaseAmount}
+            aIsExhausted={aBankroll === 0}
+            onOpenRechargeB={() => setRechargePlayer('B')}
+            onChangeChaseBetAmount={(amt) => setSettings((prev) => ({ ...prev, bChaseBet: amt }))}
+          />
+
+          {/* 4. Statistics & Bankroll Curve (统计与数据) */}
+          <StatsPanel
+            stats={stats}
+            bState={bState}
+            handResults={handResults}
+            aBankroll={aBankroll}
+            bBankroll={bBankroll}
+            onResetSession={handleResetSession}
+          />
         </div>
-
-        {/* Statistics & Bankroll Curve */}
-        <StatsPanel
-          stats={stats}
-          bState={bState}
-          handResults={handResults}
-          aBankroll={aBankroll}
-          bBankroll={bBankroll}
-          onResetSession={handleResetSession}
-        />
       </div>
 
       {/* Settings Modal */}
