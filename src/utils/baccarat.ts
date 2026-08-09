@@ -305,6 +305,13 @@ export function getCumulativeProfitB(results: HandResult[]): number {
 }
 
 /**
+ * Calculate total cumulative profit for Player C across all hands in results
+ */
+export function getCumulativeProfitC(results: HandResult[]): number {
+  return results.reduce((acc, r) => acc + (r.cNetProfit ?? 0), 0);
+}
+
+/**
  * Helper to generate CSV export string
  */
 export function exportToCSV(results: HandResult[]): string {
@@ -330,14 +337,22 @@ export function exportToCSV(results: HandResult[]): string {
     'Player B Hand Profit',
     'Player B Cumulative Profit',
     'Player B Bankroll',
+    'Player C Chasing?',
+    'Player C Bet',
+    'Player C Main Amt',
+    'Player C Hand Profit',
+    'Player C Cumulative Profit',
+    'Player C Bankroll',
   ];
 
   let cumA = 0;
   let cumB = 0;
+  let cumC = 0;
 
   const rows = results.map((r) => {
     cumA += r.aNetProfit;
     cumB += r.bNetProfit;
+    cumC += r.cNetProfit ?? 0;
 
     return [
       r.handNumber,
@@ -361,6 +376,12 @@ export function exportToCSV(results: HandResult[]): string {
       r.bNetProfit,
       cumB,
       r.bBankrollAfter,
+      r.cWasChasing ? '追打中' : '观望中',
+      r.cBet?.mainBet === 'PLAYER' ? '闲' : r.cBet?.mainBet === 'BANKER' ? '庄' : '未注',
+      r.cBet?.mainAmount ?? 0,
+      r.cNetProfit ?? 0,
+      cumC,
+      r.cBankrollAfter ?? 0,
     ];
   });
 

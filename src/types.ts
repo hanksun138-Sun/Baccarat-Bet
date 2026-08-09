@@ -59,9 +59,19 @@ export interface HandResult {
   bCumulativeProfit?: number;
   bBankrollAfter: number;
 
+  // Player C outcome
+  cBet: PlayerBBet;
+  cWasChasing: boolean;
+  cMainResult: 'WIN' | 'LOSS' | 'PUSH' | 'NO_BET';
+  cNetProfit: number;
+  cCumulativeProfit?: number;
+  cBankrollAfter: number;
+
   // Chase State Snapshot After Hand
   bChasingAfter: boolean;
   aConsecutiveWinsAfter: number;
+  cChasingAfter: boolean;
+  aConsecutiveWinsAfterC: number;
 
   // Flag if A's bankroll was 0 before this hand
   aWasExhausted: boolean;
@@ -85,6 +95,7 @@ export interface ShoeRecord {
   totalHands: number;
   aProfit: number;
   bProfit: number;
+  cProfit: number;
   bankerWins: number;
   playerWins: number;
   ties: number;
@@ -92,6 +103,7 @@ export interface ShoeRecord {
   panda8Count: number;
   aBankrollEnd: number;
   bBankrollEnd: number;
+  cBankrollEnd: number;
   timestamp: number;
 }
 
@@ -99,6 +111,8 @@ export interface GameSettings {
   cutCardDepth: number; // Default 26
   bChaseBet: number; // Default 200 (Player B normal chase bet amount)
   bPostExhaustionChaseBet: number; // Default 200 (Player B chase bet amount after Player A loses all funds)
+  cChaseBet: number; // Default 200 (Player C normal chase bet amount)
+  cPostExhaustionChaseBet: number; // Default 200 (Player C chase bet amount after Player A loses all funds)
   aDefaultBet: number; // Default 10
   aEnableSideBets: boolean; // Side bets enabled
   sideBetAmount: number; // Default 10
@@ -112,6 +126,15 @@ export interface PlayerBState {
   totalChaseHands: number;
   chaseWinsB: number;
   chaseLossesB: number;
+}
+
+export interface PlayerCState {
+  isChasing: boolean;
+  aConsecutiveWins: number;
+  totalChasesTriggered: number;
+  totalChaseHands: number;
+  chaseWinsC: number;
+  chaseLossesC: number;
 }
 
 export interface GameStats {
@@ -132,4 +155,6 @@ export interface GameStats {
   aMaxDrawdown: number;
   bMaxBankroll: number;
   bMaxDrawdown: number;
+  cMaxBankroll: number;
+  cMaxDrawdown: number;
 }

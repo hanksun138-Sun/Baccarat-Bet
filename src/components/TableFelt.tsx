@@ -487,6 +487,14 @@ export const TableFelt: React.FC<TableFeltProps> = ({
                 {lastHandResult.bNetProfit >= 0 ? `+¥${lastHandResult.bNetProfit}` : `-¥${Math.abs(lastHandResult.bNetProfit)}`}
               </span>
             </div>
+            {lastHandResult.cNetProfit !== undefined && (
+              <div className="flex items-center space-x-1 border-l border-[#b8860b]/30 pl-2">
+                <span className="text-amber-200/80">玩家C:</span>
+                <span className={`font-mono font-bold ${lastHandResult.cNetProfit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {lastHandResult.cNetProfit >= 0 ? `+¥${lastHandResult.cNetProfit}` : `-¥${Math.abs(lastHandResult.cNetProfit)}`}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       )}

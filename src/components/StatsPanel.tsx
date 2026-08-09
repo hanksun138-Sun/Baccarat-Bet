@@ -1,24 +1,28 @@
 import React, { useState } from 'react';
-import { GameStats, HandResult, PlayerBState, ShoeRecord } from '../types';
-import { exportToCSV, getCumulativeProfitA, getCumulativeProfitB } from '../utils/baccarat';
+import { GameStats, HandResult, PlayerBState, PlayerCState, ShoeRecord } from '../types';
+import { exportToCSV, getCumulativeProfitA, getCumulativeProfitB, getCumulativeProfitC } from '../utils/baccarat';
 
 interface StatsPanelProps {
   stats: GameStats;
   bState: PlayerBState;
+  cState?: PlayerCState;
   handResults: HandResult[];
   shoeHistory: ShoeRecord[];
   aBankroll: number;
   bBankroll: number;
+  cBankroll: number;
   onResetSession?: () => void;
 }
 
 export const StatsPanel: React.FC<StatsPanelProps> = ({
   stats,
   bState,
+  cState,
   handResults,
   shoeHistory = [],
   aBankroll,
   bBankroll,
+  cBankroll,
   onResetSession,
 }) => {
   const [activeTab, setActiveTab] = useState<'shoes' | 'curve' | 'details'>('shoes');
@@ -40,6 +44,7 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({
   const currentShoeHands = handResults.length;
   const currentShoeProfitA = handResults.reduce((s, h) => s + h.aNetProfit, 0);
   const currentShoeProfitB = handResults.reduce((s, h) => s + h.bNetProfit, 0);
+  const currentShoeProfitC = handResults.reduce((s, h) => s + (h.cNetProfit ?? 0), 0);
   const currentShoeBankerWins = handResults.filter((h) => h.winner === 'BANKER').length;
   const currentShoePlayerWins = handResults.filter((h) => h.winner === 'PLAYER').length;
   const currentShoeTies = handResults.filter((h) => h.winner === 'TIE').length;
@@ -52,6 +57,7 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({
     totalHands: currentShoeHands,
     aProfit: currentShoeProfitA,
     bProfit: currentShoeProfitB,
+    cProfit: currentShoeProfitC,
     bankerWins: currentShoeBankerWins,
     playerWins: currentShoePlayerWins,
     ties: currentShoeTies,
@@ -59,6 +65,7 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({
     panda8Count: currentShoeP8,
     aBankrollEnd: aBankroll,
     bBankrollEnd: bBankroll,
+    cBankrollEnd: cBankroll,
     timestamp: Date.now(),
     isCurrent: true,
   };
@@ -71,13 +78,16 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({
 
   let runningCumA = 0;
   let runningCumB = 0;
+  let runningCumC = 0;
   const processedShoes = allShoesList.map((s) => {
     runningCumA += s.aProfit;
     runningCumB += s.bProfit;
+    runningCumC += s.cProfit ?? 0;
     return {
       ...s,
       cumA: runningCumA,
       cumB: runningCumB,
+      cumC: runningCumC,
     };
   });
 
@@ -87,6 +97,7 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({
   // Cumulative Net Profit / Loss for current shoe
   const cumProfitA = getCumulativeProfitA(handResults);
   const cumProfitB = getCumulativeProfitB(handResults);
+  const cumProfitC = getCumulativeProfitC(handResults);
 
   // Calculate Win Rates
   const aOverallWinRate = stats.aTotalHandsBet > 0
@@ -95,6 +106,10 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({
 
   const bChaseWinRate = bState.totalChaseHands > 0
     ? ((bState.chaseWinsB / bState.totalChaseHands) * 100).toFixed(1)
+    : '0.0';
+
+  const cChaseWinRate = cState && cState.totalChaseHands > 0
+    ? ((cState.chaseWinsC / cState.totalChaseHands) * 100).toFixed(1)
     : '0.0';
 
   const aExhaustedWinRate = stats.aExhaustedHands > 0
@@ -108,14 +123,15 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({
 
   let aPath = '';
   let bPath = '';
+  let cPath = '';
 
   if (dataPoints.length > 1) {
     const minBankroll = Math.min(
-      ...dataPoints.map((d) => Math.min(d.aBankrollAfter, d.bBankrollAfter)),
+      ...dataPoints.map((d) => Math.min(d.aBankrollAfter, d.bBankrollAfter, d.cBankrollAfter ?? 0)),
       0
     );
     const maxBankroll = Math.max(
-      ...dataPoints.map((d) => Math.max(d.aBankrollAfter, d.bBankrollAfter)),
+      ...dataPoints.map((d) => Math.max(d.aBankrollAfter, d.bBankrollAfter, d.cBankrollAfter ?? 0)),
       12000
     );
 
@@ -136,6 +152,14 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({
         return `${i === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`;
       })
       .join(' ');
+
+    cPath = dataPoints
+      .map((d, i) => {
+        const x = (i / (dataPoints.length - 1)) * svgWidth;
+        const y = svgHeight - (((d.cBankrollAfter ?? 0) - minBankroll) / range) * (svgHeight - 20) - 10;
+        return `${i === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`;
+      })
+      .join(' ');
   }
 
   // Last 10 hands for financial ledger table
@@ -153,7 +177,7 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({
           {onResetSession && (
             <button
               onClick={onResetSession}
-              className="px-2.5 py-1 rounded-lg bg-red-950/80 hover:bg-red-900 text-red-200 font-bold text-xs border border-red-500/40 shadow transition-all active:scale-95 touch-manipulation font-sans"
+              className="px-2.5 py-1 rounded-lg bg-red-950/80 hover:bg-red-900 text-red-200 font-bold text-xs border border-red-500/40 shadow transition-all active:scale-95 touch-manipulation font-sans cursor-pointer"
               title="一键重置所有金额与历史数据"
             >
               ⚠️ 恢复初始状态
@@ -162,49 +186,58 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({
           <button
             onClick={handleExportCSV}
             disabled={handResults.length === 0 && shoeHistory.length === 0}
-            className="px-3 py-1 rounded-lg bg-[#b8860b] hover:bg-yellow-500 disabled:opacity-40 text-black font-bold text-xs border border-amber-300 shadow transition-all active:scale-95 touch-manipulation font-sans"
+            className="px-3 py-1 rounded-lg bg-[#b8860b] hover:bg-yellow-500 disabled:opacity-40 text-black font-bold text-xs border border-amber-300 shadow transition-all active:scale-95 touch-manipulation font-sans cursor-pointer"
           >
             📥 导出明细 (CSV)
           </button>
         </div>
       </div>
 
-      {/* GLOBAL RUNNING SUMMARY CARDS (总共运行了多少鞋多少手的盈亏情况) */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-4 font-sans">
-        <div className="bg-black/75 p-3 rounded-xl border border-[#b8860b]/40">
+      {/* GLOBAL RUNNING SUMMARY CARDS */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-2.5 mb-4 font-sans">
+        <div className="bg-black/75 p-2.5 rounded-xl border border-[#b8860b]/40">
           <span className="text-[11px] text-amber-200/70 block font-bold">总运行鞋数 / 手数</span>
           <div className="flex items-baseline space-x-1 mt-1">
-            <span className="text-xl sm:text-2xl font-mono font-bold text-[#d4af37]">{totalShoesCount}</span>
-            <span className="text-xs text-amber-200/60">靴 /</span>
-            <span className="text-xl sm:text-2xl font-mono font-bold text-amber-100">{totalHandsCount}</span>
+            <span className="text-lg sm:text-xl font-mono font-bold text-[#d4af37]">{totalShoesCount}</span>
+            <span className="text-xs text-amber-200/60">靴/</span>
+            <span className="text-lg sm:text-xl font-mono font-bold text-amber-100">{totalHandsCount}</span>
             <span className="text-xs text-amber-200/60">手</span>
           </div>
           <span className="text-[10px] text-amber-200/50 block mt-1">
-            已打完 {shoeHistory.length} 靴 {currentShoeHands > 0 ? `| 第${shoeHistory.length + 1}靴进行中 (${currentShoeHands}手)` : ''}
+            已打完 {shoeHistory.length} 靴 {currentShoeHands > 0 ? `| 第${shoeHistory.length + 1}靴 (${currentShoeHands}手)` : ''}
           </span>
         </div>
 
-        <div className="bg-black/75 p-3 rounded-xl border border-emerald-500/30">
+        <div className="bg-black/75 p-2.5 rounded-xl border border-amber-500/30">
           <span className="text-[11px] text-amber-200/70 block font-bold">玩家A 跨靴累计盈亏</span>
-          <span className={`text-xl sm:text-2xl font-mono font-bold mt-0.5 block ${runningCumA >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+          <span className={`text-lg sm:text-xl font-mono font-bold mt-0.5 block ${runningCumA >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
             {runningCumA >= 0 ? `+¥${runningCumA.toLocaleString()}` : `-¥${Math.abs(runningCumA).toLocaleString()}`}
           </span>
           <span className="text-[10px] text-amber-200/50 block mt-1">当前资金: ¥{aBankroll.toLocaleString()}</span>
         </div>
 
-        <div className="bg-black/75 p-3 rounded-xl border border-amber-500/30">
-          <span className="text-[11px] text-amber-200/70 block font-bold">玩家B 跨靴累计盈亏</span>
-          <span className={`text-xl sm:text-2xl font-mono font-bold mt-0.5 block ${runningCumB >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+        <div className="bg-black/75 p-2.5 rounded-xl border border-emerald-500/30">
+          <span className="text-[11px] text-amber-200/70 block font-bold">玩家B (3连赢退) 跨靴盈亏</span>
+          <span className={`text-lg sm:text-xl font-mono font-bold mt-0.5 block ${runningCumB >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
             {runningCumB >= 0 ? `+¥${runningCumB.toLocaleString()}` : `-¥${Math.abs(runningCumB).toLocaleString()}`}
           </span>
           <span className="text-[10px] text-amber-200/50 block mt-1">当前资金: ¥{bBankroll.toLocaleString()}</span>
         </div>
 
-        <div className="bg-black/75 p-3 rounded-xl border border-[#b8860b]/30">
-          <span className="text-[11px] text-amber-200/70 block font-bold">胜率统计 (下注局)</span>
-          <div className="text-xs font-mono mt-1 space-y-0.5">
+        <div className="bg-black/75 p-2.5 rounded-xl border border-sky-500/30">
+          <span className="text-[11px] text-amber-200/70 block font-bold">玩家C (2连赢退) 跨靴盈亏</span>
+          <span className={`text-lg sm:text-xl font-mono font-bold mt-0.5 block ${runningCumC >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+            {runningCumC >= 0 ? `+¥${runningCumC.toLocaleString()}` : `-¥${Math.abs(runningCumC).toLocaleString()}`}
+          </span>
+          <span className="text-[10px] text-amber-200/50 block mt-1">当前资金: ¥{cBankroll.toLocaleString()}</span>
+        </div>
+
+        <div className="bg-black/75 p-2.5 rounded-xl border border-[#b8860b]/30 col-span-2 md:col-span-1">
+          <span className="text-[11px] text-amber-200/70 block font-bold">胜率统计</span>
+          <div className="text-[11px] font-mono mt-1 space-y-0.5">
             <div>A胜率: <strong className="text-[#d4af37]">{aOverallWinRate}%</strong> ({stats.aTotalWins}胜/{stats.aTotalLosses}负)</div>
-            <div>B追打胜率: <strong className="text-emerald-300">{bChaseWinRate}%</strong> ({bState.chaseWinsB}胜/{bState.chaseLossesB}负)</div>
+            <div>B胜率: <strong className="text-emerald-300">{bChaseWinRate}%</strong> ({bState.chaseWinsB}胜/{bState.chaseLossesB}负)</div>
+            <div>C胜率: <strong className="text-sky-300">{cChaseWinRate}%</strong> ({cState?.chaseWinsC ?? 0}胜/{cState?.chaseLossesC ?? 0}负)</div>
           </div>
         </div>
       </div>
@@ -213,7 +246,7 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({
       <div className="flex border-b border-[#b8860b]/30 mb-3 text-xs font-sans">
         <button
           onClick={() => setActiveTab('shoes')}
-          className={`px-3 py-1.5 font-bold rounded-t-lg transition-colors ${
+          className={`px-3 py-1.5 font-bold rounded-t-lg transition-colors cursor-pointer ${
             activeTab === 'shoes'
               ? 'bg-[#b8860b] text-black shadow'
               : 'text-amber-200/70 hover:text-white bg-black/40'
@@ -223,7 +256,7 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({
         </button>
         <button
           onClick={() => setActiveTab('curve')}
-          className={`px-3 py-1.5 font-bold rounded-t-lg transition-colors ml-1 ${
+          className={`px-3 py-1.5 font-bold rounded-t-lg transition-colors ml-1 cursor-pointer ${
             activeTab === 'curve'
               ? 'bg-[#b8860b] text-black shadow'
               : 'text-amber-200/70 hover:text-white bg-black/40'
@@ -233,7 +266,7 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({
         </button>
         <button
           onClick={() => setActiveTab('details')}
-          className={`px-3 py-1.5 font-bold rounded-t-lg transition-colors ml-1 ${
+          className={`px-3 py-1.5 font-bold rounded-t-lg transition-colors ml-1 cursor-pointer ${
             activeTab === 'details'
               ? 'bg-[#b8860b] text-black shadow'
               : 'text-amber-200/70 hover:text-white bg-black/40'
@@ -262,17 +295,16 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({
                 暂无靴级历史记录 (点击左侧【开始发牌】产生对局，更换牌靴后将生成第一靴记录)
               </div>
             ) : (
-              <table className="w-full text-left text-xs text-amber-100/90 font-mono border-collapse min-w-[620px]">
+              <table className="w-full text-left text-xs text-amber-100/90 font-mono border-collapse min-w-[750px]">
                 <thead>
                   <tr className="border-b border-[#b8860b]/40 text-[11px] text-amber-200/70 font-sans bg-amber-950/30">
                     <th className="py-1.5 px-2">靴次</th>
                     <th className="py-1.5 px-2">状态</th>
                     <th className="py-1.5 px-2">对局手数</th>
-                    <th className="py-1.5 px-2">庄 vs 闲 vs 和 (特殊)</th>
-                    <th className="py-1.5 px-2">玩家A 本靴盈亏</th>
-                    <th className="py-1.5 px-2">玩家A 累计盈亏</th>
-                    <th className="py-1.5 px-2">玩家B 本靴盈亏</th>
-                    <th className="py-1.5 px-2">玩家B 累计盈亏</th>
+                    <th className="py-1.5 px-2">庄 vs 闲 vs 和</th>
+                    <th className="py-1.5 px-2">玩家A 本靴(累计)</th>
+                    <th className="py-1.5 px-2">玩家B 本靴(累计)</th>
+                    <th className="py-1.5 px-2">玩家C 本靴(累计)</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -309,33 +341,29 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({
                             </span>
                           )}
                         </td>
-                        <td
-                          className={`py-1.5 px-2 font-bold ${
-                            shoe.aProfit >= 0 ? 'text-emerald-400' : 'text-red-400'
-                          }`}
-                        >
-                          {shoe.aProfit >= 0 ? `+¥${shoe.aProfit.toLocaleString()}` : `-¥${Math.abs(shoe.aProfit).toLocaleString()}`}
+                        <td className="py-1.5 px-2">
+                          <span className={shoe.aProfit >= 0 ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}>
+                            {shoe.aProfit >= 0 ? `+¥${shoe.aProfit}` : `-¥${Math.abs(shoe.aProfit)}`}
+                          </span>
+                          <span className="text-amber-200/50 text-[10px] ml-1">
+                            (计: {shoe.cumA >= 0 ? `+${shoe.cumA}` : shoe.cumA})
+                          </span>
                         </td>
-                        <td
-                          className={`py-1.5 px-2 font-bold ${
-                            shoe.cumA >= 0 ? 'text-emerald-400' : 'text-red-400'
-                          }`}
-                        >
-                          {shoe.cumA >= 0 ? `+¥${shoe.cumA.toLocaleString()}` : `-¥${Math.abs(shoe.cumA).toLocaleString()}`}
+                        <td className="py-1.5 px-2">
+                          <span className={shoe.bProfit >= 0 ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}>
+                            {shoe.bProfit >= 0 ? `+¥${shoe.bProfit}` : `-¥${Math.abs(shoe.bProfit)}`}
+                          </span>
+                          <span className="text-amber-200/50 text-[10px] ml-1">
+                            (计: {shoe.cumB >= 0 ? `+${shoe.cumB}` : shoe.cumB})
+                          </span>
                         </td>
-                        <td
-                          className={`py-1.5 px-2 font-bold ${
-                            shoe.bProfit >= 0 ? 'text-emerald-400' : 'text-red-400'
-                          }`}
-                        >
-                          {shoe.bProfit >= 0 ? `+¥${shoe.bProfit.toLocaleString()}` : `-¥${Math.abs(shoe.bProfit).toLocaleString()}`}
-                        </td>
-                        <td
-                          className={`py-1.5 px-2 font-bold ${
-                            shoe.cumB >= 0 ? 'text-emerald-400' : 'text-red-400'
-                          }`}
-                        >
-                          {shoe.cumB >= 0 ? `+¥${shoe.cumB.toLocaleString()}` : `-¥${Math.abs(shoe.cumB).toLocaleString()}`}
+                        <td className="py-1.5 px-2">
+                          <span className={(shoe.cProfit ?? 0) >= 0 ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}>
+                            {(shoe.cProfit ?? 0) >= 0 ? `+¥${shoe.cProfit ?? 0}` : `-¥${Math.abs(shoe.cProfit ?? 0)}`}
+                          </span>
+                          <span className="text-amber-200/50 text-[10px] ml-1">
+                            (计: {shoe.cumC >= 0 ? `+${shoe.cumC}` : shoe.cumC})
+                          </span>
                         </td>
                       </tr>
                     );
@@ -349,35 +377,44 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({
           {processedShoes.length > 0 && (
             <div className="bg-black/75 p-3 rounded-xl border border-[#b8860b]/30">
               <span className="text-amber-200 text-xs font-bold block mb-2">
-                📊 多靴累积盈亏柱状图 (Cumulative Shoe Profit Visualizer)
+                📊 多靴累积盈亏柱状图 Comparison (A vs B vs C)
               </span>
-              <div className="flex items-end space-x-2 h-28 pt-4 pb-2 px-2 overflow-x-auto border-b border-[#b8860b]/20 custom-scrollbar">
+              <div className="flex items-end space-x-3 h-28 pt-4 pb-2 px-2 overflow-x-auto border-b border-[#b8860b]/20 custom-scrollbar">
                 {processedShoes.map((shoe) => {
                   const maxAbs = Math.max(
-                    ...processedShoes.map((s) => Math.max(Math.abs(s.cumA), Math.abs(s.cumB))),
+                    ...processedShoes.map((s) => Math.max(Math.abs(s.cumA), Math.abs(s.cumB), Math.abs(s.cumC))),
                     1000
                   );
                   const heightA = Math.min(100, Math.max(10, (Math.abs(shoe.cumA) / maxAbs) * 70));
                   const heightB = Math.min(100, Math.max(10, (Math.abs(shoe.cumB) / maxAbs) * 70));
+                  const heightC = Math.min(100, Math.max(10, (Math.abs(shoe.cumC) / maxAbs) * 70));
 
                   return (
-                    <div key={shoe.shoeNumber} className="flex flex-col items-center space-y-1 min-w-[50px]">
+                    <div key={shoe.shoeNumber} className="flex flex-col items-center space-y-1 min-w-[65px]">
                       <div className="flex items-end space-x-1 h-16">
                         {/* Player A bar */}
                         <div
                           style={{ height: `${heightA}%` }}
-                          className={`w-3.5 rounded-t transition-all ${
+                          className={`w-3 rounded-t transition-all ${
                             shoe.cumA >= 0 ? 'bg-amber-400' : 'bg-red-500'
                           }`}
-                          title={`Shoe #${shoe.shoeNumber} A Cum: ¥${shoe.cumA}`}
+                          title={`Shoe #${shoe.shoeNumber} A: ¥${shoe.cumA}`}
                         />
                         {/* Player B bar */}
                         <div
                           style={{ height: `${heightB}%` }}
-                          className={`w-3.5 rounded-t transition-all ${
+                          className={`w-3 rounded-t transition-all ${
                             shoe.cumB >= 0 ? 'bg-emerald-400' : 'bg-red-400'
                           }`}
-                          title={`Shoe #${shoe.shoeNumber} B Cum: ¥${shoe.cumB}`}
+                          title={`Shoe #${shoe.shoeNumber} B: ¥${shoe.cumB}`}
+                        />
+                        {/* Player C bar */}
+                        <div
+                          style={{ height: `${heightC}%` }}
+                          className={`w-3 rounded-t transition-all ${
+                            shoe.cumC >= 0 ? 'bg-sky-400' : 'bg-rose-400'
+                          }`}
+                          title={`Shoe #${shoe.shoeNumber} C: ¥${shoe.cumC}`}
                         />
                       </div>
                       <span className="text-[10px] text-amber-200/70 font-mono">第{shoe.shoeNumber}靴</span>
@@ -386,8 +423,9 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({
                 })}
               </div>
               <div className="flex justify-between items-center text-[10px] text-amber-200/60 mt-1">
-                <span>黄/红柱: 玩家A 累积盈亏</span>
-                <span>绿/红柱: 玩家B 累积盈亏</span>
+                <span>黄: 玩家A</span>
+                <span>绿: 玩家B (3连赢退)</span>
+                <span>蓝: 玩家C (2连赢退)</span>
               </div>
             </div>
           )}
@@ -399,12 +437,15 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({
         <div className="space-y-3 font-sans">
           <div className="bg-black/75 p-3 rounded-xl border border-[#b8860b]/30">
             <div className="flex items-center justify-between text-xs mb-2">
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-3 flex-wrap gap-y-1">
                 <span className="text-[#d4af37] font-bold flex items-center">
-                  <span className="w-3 h-0.5 bg-[#d4af37] inline-block mr-1.5" /> 玩家A 资金: ¥{aBankroll.toLocaleString()}
+                  <span className="w-3 h-0.5 bg-[#d4af37] inline-block mr-1" /> A: ¥{aBankroll.toLocaleString()}
                 </span>
                 <span className="text-emerald-400 font-bold flex items-center">
-                  <span className="w-3 h-0.5 bg-emerald-400 inline-block mr-1.5" /> 玩家B 资金: ¥{bBankroll.toLocaleString()}
+                  <span className="w-3 h-0.5 bg-emerald-400 inline-block mr-1" /> B: ¥{bBankroll.toLocaleString()}
+                </span>
+                <span className="text-sky-400 font-bold flex items-center">
+                  <span className="w-3 h-0.5 bg-sky-400 inline-block mr-1" /> C: ¥{cBankroll.toLocaleString()}
                 </span>
               </div>
               <span className="text-amber-200/50 text-[10px]">近50手资金走势</span>
@@ -416,6 +457,7 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({
                 <line x1="0" y1="60" x2={svgWidth} y2="60" stroke="rgba(184,134,11,0.2)" strokeDasharray="3 3" />
                 <line x1="0" y1="100" x2={svgWidth} y2="100" stroke="rgba(184,134,11,0.2)" strokeDasharray="3 3" />
 
+                <path d={cPath} fill="none" stroke="#38bdf8" strokeWidth="2.5" />
                 <path d={bPath} fill="none" stroke="#10b981" strokeWidth="2.5" />
                 <path d={aPath} fill="none" stroke="#d4af37" strokeWidth="2.5" />
               </svg>
@@ -429,9 +471,10 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs font-sans">
             <div className="bg-black/75 p-3 rounded-xl border border-[#b8860b]/30 flex items-center justify-between">
               <span className="text-amber-200/70">最大回撤 (Max Drawdown):</span>
-              <div className="space-x-3 font-mono">
-                <span>玩家A: <strong className="text-red-400">¥{stats.aMaxDrawdown.toLocaleString()}</strong></span>
-                <span>玩家B: <strong className="text-red-400">¥{stats.bMaxDrawdown.toLocaleString()}</strong></span>
+              <div className="space-x-2.5 font-mono text-[11px]">
+                <span>A: <strong className="text-red-400">¥{stats.aMaxDrawdown.toLocaleString()}</strong></span>
+                <span>B: <strong className="text-red-400">¥{stats.bMaxDrawdown.toLocaleString()}</strong></span>
+                <span>C: <strong className="text-red-400">¥{(stats.cMaxDrawdown ?? 0).toLocaleString()}</strong></span>
               </div>
             </div>
 
@@ -455,21 +498,20 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({
                 <span className="text-amber-200 font-bold">📜 近期对局资金变动明细 (最新10手)</span>
                 <span className="text-amber-200/50 text-[10px]">实时核算</span>
               </div>
-              <table className="w-full text-left text-xs text-amber-100/90 font-mono border-collapse min-w-[500px]">
+              <table className="w-full text-left text-xs text-amber-100/90 font-mono border-collapse min-w-[650px]">
                 <thead>
                   <tr className="border-b border-[#b8860b]/30 text-[11px] text-amber-200/60 font-sans">
                     <th className="py-1 px-1.5">手数</th>
                     <th className="py-1 px-1.5">玩家A押注</th>
                     <th className="py-1 px-1.5">赛果</th>
                     <th className="py-1 px-1.5">A本手盈亏</th>
-                    <th className="py-1 px-1.5">A累计盈亏</th>
                     <th className="py-1 px-1.5">A资金余额</th>
-                    <th className="py-1 px-1.5">B下注及盈亏</th>
+                    <th className="py-1 px-1.5">B跟注及盈亏</th>
+                    <th className="py-1 px-1.5">C跟注及盈亏</th>
                   </tr>
                 </thead>
                 <tbody>
                   {recent10Hands.map((h, idx) => {
-                    const aCum = h.aCumulativeProfit ?? handResults.slice(0, handResults.length - idx).reduce((s, x) => s + x.aNetProfit, 0);
                     return (
                       <tr key={h.handNumber} className="border-b border-amber-950/40 hover:bg-amber-950/20 text-[11px]">
                         <td className="py-1 px-1.5 font-bold text-amber-300">#{h.handNumber}</td>
@@ -492,9 +534,6 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({
                         <td className={`py-1 px-1.5 font-bold ${h.aNetProfit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                           {h.aNetProfit >= 0 ? `+¥${h.aNetProfit}` : `-¥${Math.abs(h.aNetProfit)}`}
                         </td>
-                        <td className={`py-1 px-1.5 font-bold ${aCum >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                          {aCum >= 0 ? `+¥${aCum}` : `-¥${Math.abs(aCum)}`}
-                        </td>
                         <td className="py-1 px-1.5 font-mono text-amber-200">
                           ¥{h.aBankrollAfter.toLocaleString()}
                         </td>
@@ -504,6 +543,18 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({
                               {h.bBet.mainBet === 'PLAYER' ? '闲' : '庄'} ¥{h.bBet.mainAmount} (
                               <strong className={h.bNetProfit >= 0 ? 'text-emerald-400' : 'text-red-400'}>
                                 {h.bNetProfit >= 0 ? `+${h.bNetProfit}` : h.bNetProfit}
+                              </strong>)
+                            </span>
+                          ) : (
+                            <span className="text-amber-200/40">观望</span>
+                          )}
+                        </td>
+                        <td className="py-1 px-1.5">
+                          {h.cBet?.mainBet ? (
+                            <span>
+                              {h.cBet.mainBet === 'PLAYER' ? '闲' : '庄'} ¥{h.cBet.mainAmount} (
+                              <strong className={(h.cNetProfit ?? 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}>
+                                {(h.cNetProfit ?? 0) >= 0 ? `+${h.cNetProfit}` : h.cNetProfit}
                               </strong>)
                             </span>
                           ) : (

@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 
 interface RechargeModalProps {
   isOpen: boolean;
-  targetPlayer: 'A' | 'B' | null;
+  targetPlayer: 'A' | 'B' | 'C' | null;
   onClose: () => void;
-  onConfirmRecharge: (player: 'A' | 'B', amount: number) => void;
+  onConfirmRecharge: (player: 'A' | 'B' | 'C', amount: number) => void;
 }
 
 export const RechargeModal: React.FC<RechargeModalProps> = ({
@@ -32,7 +32,7 @@ export const RechargeModal: React.FC<RechargeModalProps> = ({
       <div className="bg-[#051a0b] border-2 border-[#b8860b] rounded-2xl p-6 max-w-sm w-full shadow-2xl space-y-4 animate-scale-up text-amber-100 font-sans">
         <div className="flex items-center justify-between border-b border-[#b8860b]/30 pb-3">
           <h3 className="text-lg font-serif-casino font-bold text-[#d4af37]">
-            💰 资金充值 ({targetPlayer === 'A' ? '玩家A (我)' : '玩家B (对家)'})
+            💰 资金充值 ({targetPlayer === 'A' ? '玩家A (我)' : targetPlayer === 'B' ? '玩家B (对家 - 连赢3手退出)' : '玩家C (对家 - 连赢2手退出)'})
           </h3>
           <button
             onClick={onClose}

@@ -21,6 +21,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [cutCardDepth, setCutCardDepth] = useState<number>(settings.cutCardDepth);
   const [bChaseBet, setBChaseBet] = useState<number>(settings.bChaseBet);
   const [bPostExhaustionChaseBet, setBPostExhaustionChaseBet] = useState<number>(settings.bPostExhaustionChaseBet);
+  const [cChaseBet, setCChaseBet] = useState<number>(settings.cChaseBet ?? 200);
+  const [cPostExhaustionChaseBet, setCPostExhaustionChaseBet] = useState<number>(settings.cPostExhaustionChaseBet ?? 200);
   const [aDefaultBet, setADefaultBet] = useState<number>(settings.aDefaultBet);
   const [aEnableSideBets, setAEnableSideBets] = useState<boolean>(settings.aEnableSideBets);
   const [prngSeed, setPrngSeed] = useState<string>(settings.prngSeed);
@@ -36,6 +38,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       cutCardDepth: Math.max(1, cutCardDepth),
       bChaseBet: Math.max(10, bChaseBet),
       bPostExhaustionChaseBet: Math.max(10, bPostExhaustionChaseBet),
+      cChaseBet: Math.max(10, cChaseBet),
+      cPostExhaustionChaseBet: Math.max(10, cPostExhaustionChaseBet),
       aDefaultBet: Math.max(1, aDefaultBet),
       aEnableSideBets,
       sideBetAmount: 10,
@@ -136,7 +140,72 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               className="w-full bg-black/70 border border-[#b8860b]/40 rounded-lg p-2.5 text-amber-300 font-mono focus:outline-none focus:border-[#d4af37]"
             />
             <span className="text-[11px] text-amber-200/60 mt-1 block">
-              * 当玩家A资金归零后，B触发追打时使用此固定金额。
+              * 当玩家A资金归零后，B触发追打时使用此固定金额 (A连赢3手退出)。
+            </span>
+          </div>
+
+          {/* Player C Normal Chase Bet Amount */}
+          <div>
+            <label className="block text-amber-200 font-bold mb-1">
+              玩家C 固定追打金额 (连赢2手退出，默认 200 元):
+            </label>
+            <div className="grid grid-cols-5 gap-1.5 mb-2">
+              {[100, 200, 300, 400, 500, 600, 700, 800, 900, 1000].map((amt) => (
+                <button
+                  key={amt}
+                  type="button"
+                  onClick={() => setCChaseBet(amt)}
+                  className={`py-1 rounded border text-xs font-mono font-bold transition-all ${
+                    cChaseBet === amt
+                      ? 'bg-[#d4af37] text-black border-amber-200 shadow-sm'
+                      : 'bg-black/60 text-amber-200 border-[#b8860b]/30 hover:bg-black/90'
+                  }`}
+                >
+                  ¥{amt}
+                </button>
+              ))}
+            </div>
+            <input
+              type="number"
+              min="10"
+              step="100"
+              value={cChaseBet}
+              onChange={(e) => setCChaseBet(parseInt(e.target.value, 10) || 200)}
+              className="w-full bg-black/70 border border-[#b8860b]/40 rounded-lg p-2.5 text-amber-300 font-mono focus:outline-none focus:border-[#d4af37]"
+            />
+          </div>
+
+          {/* Player C Post-Exhaustion Chase Bet Amount */}
+          <div>
+            <label className="block text-amber-200 font-bold mb-1">
+              玩家A输光后 玩家C追打金额 (可选 100 ~ 1000 元):
+            </label>
+            <div className="grid grid-cols-5 gap-1.5 mb-2">
+              {[100, 200, 300, 400, 500, 600, 700, 800, 900, 1000].map((amt) => (
+                <button
+                  key={amt}
+                  type="button"
+                  onClick={() => setCPostExhaustionChaseBet(amt)}
+                  className={`py-1 rounded border text-xs font-mono font-bold transition-all ${
+                    cPostExhaustionChaseBet === amt
+                      ? 'bg-[#d4af37] text-black border-amber-200 shadow-sm'
+                      : 'bg-black/60 text-amber-200 border-[#b8860b]/30 hover:bg-black/90'
+                  }`}
+                >
+                  ¥{amt}
+                </button>
+              ))}
+            </div>
+            <input
+              type="number"
+              min="10"
+              step="100"
+              value={cPostExhaustionChaseBet}
+              onChange={(e) => setCPostExhaustionChaseBet(parseInt(e.target.value, 10) || 200)}
+              className="w-full bg-black/70 border border-[#b8860b]/40 rounded-lg p-2.5 text-amber-300 font-mono focus:outline-none focus:border-[#d4af37]"
+            />
+            <span className="text-[11px] text-amber-200/60 mt-1 block">
+              * 当玩家A资金归零后，C触发追打时使用此固定金额 (A连赢2手退出)。
             </span>
           </div>
 
