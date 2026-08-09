@@ -569,11 +569,7 @@ export default function App() {
               onOpenSettings={() => setIsSettingsOpen(true)}
             />
 
-            {/* Road Maps (大路 & 珠盘路走势) directly on the main screen */}
-            <BigRoad handResults={handResults} />
-          </div>
-
-          <div className="lg:col-span-1">
+            {/* Player B Chase Status Panel */}
             <PlayerBStatus
               bBankroll={bBankroll}
               bState={bState}
@@ -583,6 +579,11 @@ export default function App() {
               onOpenRechargeB={() => setRechargePlayer('B')}
               onChangeChaseBetAmount={(amt) => setSettings((prev) => ({ ...prev, bChaseBet: amt }))}
             />
+          </div>
+
+          <div className="lg:col-span-1">
+            {/* Road Maps (大路 & 珠盘路走势) */}
+            <BigRoad handResults={handResults} />
           </div>
         </div>
 
