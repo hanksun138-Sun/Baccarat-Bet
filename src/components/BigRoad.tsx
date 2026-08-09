@@ -269,155 +269,153 @@ export const BigRoad: React.FC<BigRoadProps> = ({ handResults }) => {
           </div>
         )}
 
-        {/* STEP-BY-STEP HAND HISTORY LOG (逐笔明细记录) */}
-        {(activeTab === 'both' || activeTab === 'history') && (
-          <div className="pt-1 border-t border-[#b8860b]/30">
-            <div className="flex items-center justify-between text-[11px] text-amber-200/90 mb-1.5">
-              <span className="font-bold flex items-center">
-                📝 逐笔路单明细记录 (Step-by-Step Hand History Log)
-                <span className="ml-2 text-[10px] text-amber-200/50 font-normal">
-                  共 {handResults.length} 手对局
-                </span>
+        {/* STEP-BY-STEP HAND HISTORY LOG (逐笔明细记录 - ALWAYS VISIBLE) */}
+        <div className="pt-2 border-t border-[#b8860b]/30">
+          <div className="flex items-center justify-between text-[11px] text-amber-200/90 mb-1.5">
+            <span className="font-bold flex items-center">
+              📝 逐笔路单明细记录 (Step-by-Step Hand Log)
+              <span className="ml-2 text-[10px] text-amber-200/50 font-normal">
+                共 {handResults.length} 手对局
               </span>
-              <button
-                onClick={() => setShowHistoryTable((prev) => !prev)}
-                className="text-[10px] text-[#d4af37] hover:underline px-1.5 py-0.5 rounded bg-black/40 border border-[#b8860b]/30"
-              >
-                {showHistoryTable ? '收起明细 ▲' : '展开明细 ▼'}
-              </button>
-            </div>
-
-            {showHistoryTable && (
-              <div className="w-full max-h-60 overflow-y-auto overflow-x-auto custom-scrollbar bg-black/80 rounded-lg border border-[#b8860b]/30 p-1.5">
-                {handResults.length === 0 ? (
-                  <div className="text-center py-4 text-xs text-amber-200/50">
-                    暂无对局明细 (点击【开始发牌】或【自动模拟】产生数据)
-                  </div>
-                ) : (
-                  <table className="w-full text-left text-[11px] font-mono border-collapse min-w-[550px]">
-                    <thead>
-                      <tr className="border-b border-[#b8860b]/30 text-amber-200/70 text-[10px] bg-amber-950/20">
-                        <th className="py-1 px-1.5">手数</th>
-                        <th className="py-1 px-1.5">结果</th>
-                        <th className="py-1 px-1.5">点数与持牌 (闲 vs 庄)</th>
-                        <th className="py-1 px-1.5">特殊</th>
-                        <th className="py-1 px-1.5">玩家A押注/盈亏</th>
-                        <th className="py-1 px-1.5">玩家B追打/盈亏</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {[...handResults].reverse().map((hand) => {
-                        const formatCards = (cards: typeof hand.playerCards) => {
-                          const suitMap: Record<string, string> = {
-                            spades: '♠',
-                            hearts: '♥',
-                            diamonds: '♦',
-                            clubs: '♣',
-                          };
-                          return cards
-                            .map((c) => `${suitMap[c.suit] || ''}${c.rank}`)
-                            .join(' ');
-                        };
-
-                        return (
-                          <tr
-                            key={hand.handNumber}
-                            className="border-b border-white/5 hover:bg-white/5 transition-colors text-[10px]"
-                          >
-                            <td className="py-1 px-1.5 font-bold text-amber-300">
-                              #{hand.handNumber}
-                            </td>
-                            <td className="py-1 px-1.5 font-bold">
-                              {hand.winner === 'BANKER' ? (
-                                <span className="text-red-400 bg-red-950/80 px-1 py-0.5 rounded border border-red-800/50">
-                                  🔴 庄胜 ({hand.bankerScore}点)
-                                </span>
-                              ) : hand.winner === 'PLAYER' ? (
-                                <span className="text-blue-400 bg-blue-950/80 px-1 py-0.5 rounded border border-blue-800/50">
-                                  🔵 闲胜 ({hand.playerScore}点)
-                                </span>
-                              ) : (
-                                <span className="text-emerald-400 bg-emerald-950/80 px-1 py-0.5 rounded border border-emerald-800/50">
-                                  🟢 和局 ({hand.playerScore}点)
-                                </span>
-                              )}
-                            </td>
-                            <td className="py-1 px-1.5 text-amber-100/90 whitespace-nowrap">
-                              <span className="text-blue-300">
-                                闲[{formatCards(hand.playerCards)}]
-                              </span>{' '}
-                              <span className="text-amber-200/50">vs</span>{' '}
-                              <span className="text-red-300">
-                                庄[{formatCards(hand.bankerCards)}]
-                              </span>
-                            </td>
-                            <td className="py-1 px-1.5">
-                              {hand.isDragon7 ? (
-                                <span className="text-amber-300 bg-amber-950/80 px-1 py-0.5 rounded border border-amber-500/40 font-bold">
-                                  🐉 龙7
-                                </span>
-                              ) : hand.isPanda8 ? (
-                                <span className="text-blue-200 bg-blue-900/80 px-1 py-0.5 rounded border border-blue-400/40 font-bold">
-                                  🐼 猫8
-                                </span>
-                              ) : (
-                                <span className="text-amber-200/30">-</span>
-                              )}
-                            </td>
-                            <td className="py-1 px-1.5 whitespace-nowrap">
-                              {hand.aBet.mainBet ? (
-                                <span>
-                                  {hand.aBet.mainBet === 'PLAYER' ? '闲' : '庄'} ¥
-                                  {hand.aBet.mainAmount} (
-                                  <strong
-                                    className={
-                                      hand.aNetProfit >= 0
-                                        ? 'text-emerald-400'
-                                        : 'text-red-400'
-                                    }
-                                  >
-                                    {hand.aNetProfit >= 0
-                                      ? `+¥${hand.aNetProfit}`
-                                      : `-¥${Math.abs(hand.aNetProfit)}`}
-                                  </strong>
-                                  )
-                                </span>
-                              ) : (
-                                <span className="text-amber-200/40">未押注</span>
-                              )}
-                            </td>
-                            <td className="py-1 px-1.5 whitespace-nowrap">
-                              {hand.bBet.mainBet ? (
-                                <span>
-                                  {hand.bBet.mainBet === 'PLAYER' ? '闲' : '庄'} ¥
-                                  {hand.bBet.mainAmount} (
-                                  <strong
-                                    className={
-                                      hand.bNetProfit >= 0
-                                        ? 'text-emerald-400'
-                                        : 'text-red-400'
-                                    }
-                                  >
-                                    {hand.bNetProfit >= 0
-                                      ? `+¥${hand.bNetProfit}`
-                                      : `-¥${Math.abs(hand.bNetProfit)}`}
-                                  </strong>
-                                  )
-                                </span>
-                              ) : (
-                                <span className="text-amber-200/40">观望</span>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-            )}
+            </span>
+            <button
+              onClick={() => setShowHistoryTable((prev) => !prev)}
+              className="text-[10px] text-[#d4af37] hover:underline px-2 py-0.5 rounded bg-black/50 border border-[#b8860b]/30 active:scale-95 transition-transform"
+            >
+              {showHistoryTable ? '收起明细 ▲' : '展开明细 ▼'}
+            </button>
           </div>
-        )}
+
+          {showHistoryTable && (
+            <div className={`w-full overflow-y-auto overflow-x-auto custom-scrollbar bg-black/80 rounded-lg border border-[#b8860b]/30 p-1.5 ${activeTab === 'history' ? 'max-h-[500px]' : 'max-h-64'}`}>
+              {handResults.length === 0 ? (
+                <div className="text-center py-5 text-xs text-amber-200/50 font-mono">
+                  暂无对局明细记录 (点击左侧【开始发牌】或【自动模拟】产生数据)
+                </div>
+              ) : (
+                <table className="w-full text-left text-[11px] font-mono border-collapse min-w-[500px]">
+                  <thead>
+                    <tr className="border-b border-[#b8860b]/30 text-amber-200/70 text-[10px] bg-amber-950/30 sticky top-0 backdrop-blur-md">
+                      <th className="py-1 px-1.5">手数</th>
+                      <th className="py-1 px-1.5">结果</th>
+                      <th className="py-1 px-1.5">闲 vs 庄 点数持牌</th>
+                      <th className="py-1 px-1.5">特殊</th>
+                      <th className="py-1 px-1.5">玩家A 押注/盈亏</th>
+                      <th className="py-1 px-1.5">玩家B 追打/盈亏</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...handResults].reverse().map((hand) => {
+                      const formatCards = (cards: typeof hand.playerCards) => {
+                        const suitMap: Record<string, string> = {
+                          spades: '♠',
+                          hearts: '♥',
+                          diamonds: '♦',
+                          clubs: '♣',
+                        };
+                        return cards
+                          .map((c) => `${suitMap[c.suit] || ''}${c.rank}`)
+                          .join(' ');
+                      };
+
+                      return (
+                        <tr
+                          key={hand.handNumber}
+                          className="border-b border-white/5 hover:bg-white/10 transition-colors text-[10px]"
+                        >
+                          <td className="py-1 px-1.5 font-bold text-amber-300">
+                            #{hand.handNumber}
+                          </td>
+                          <td className="py-1 px-1.5 font-bold">
+                            {hand.winner === 'BANKER' ? (
+                              <span className="text-red-400 bg-red-950/80 px-1 py-0.5 rounded border border-red-800/50">
+                                🔴 庄胜 ({hand.bankerScore}点)
+                              </span>
+                            ) : hand.winner === 'PLAYER' ? (
+                              <span className="text-blue-400 bg-blue-950/80 px-1 py-0.5 rounded border border-blue-800/50">
+                                🔵 闲胜 ({hand.playerScore}点)
+                              </span>
+                            ) : (
+                              <span className="text-emerald-400 bg-emerald-950/80 px-1 py-0.5 rounded border border-emerald-800/50">
+                                🟢 和局 ({hand.playerScore}点)
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-1 px-1.5 text-amber-100/90 whitespace-nowrap">
+                            <span className="text-blue-300">
+                              闲[{formatCards(hand.playerCards)}]
+                            </span>{' '}
+                            <span className="text-amber-200/50">vs</span>{' '}
+                            <span className="text-red-300">
+                              庄[{formatCards(hand.bankerCards)}]
+                            </span>
+                          </td>
+                          <td className="py-1 px-1.5">
+                            {hand.isDragon7 ? (
+                              <span className="text-amber-300 bg-amber-950/80 px-1 py-0.5 rounded border border-amber-500/40 font-bold">
+                                🐉 龙7
+                              </span>
+                            ) : hand.isPanda8 ? (
+                              <span className="text-blue-200 bg-blue-900/80 px-1 py-0.5 rounded border border-blue-400/40 font-bold">
+                                🐼 猫8
+                              </span>
+                            ) : (
+                              <span className="text-amber-200/30">-</span>
+                            )}
+                          </td>
+                          <td className="py-1 px-1.5 whitespace-nowrap">
+                            {hand.aBet.mainBet ? (
+                              <span>
+                                {hand.aBet.mainBet === 'PLAYER' ? '闲' : '庄'} ¥
+                                {hand.aBet.mainAmount} (
+                                <strong
+                                  className={
+                                    hand.aNetProfit >= 0
+                                      ? 'text-emerald-400'
+                                      : 'text-red-400'
+                                  }
+                                >
+                                  {hand.aNetProfit >= 0
+                                    ? `+¥${hand.aNetProfit}`
+                                    : `-¥${Math.abs(hand.aNetProfit)}`}
+                                </strong>
+                                )
+                              </span>
+                            ) : (
+                              <span className="text-amber-200/40">未押注</span>
+                            )}
+                          </td>
+                          <td className="py-1 px-1.5 whitespace-nowrap">
+                            {hand.bBet.mainBet ? (
+                              <span>
+                                {hand.bBet.mainBet === 'PLAYER' ? '闲' : '庄'} ¥
+                                {hand.bBet.mainAmount} (
+                                <strong
+                                  className={
+                                    hand.bNetProfit >= 0
+                                      ? 'text-emerald-400'
+                                      : 'text-red-400'
+                                  }
+                                >
+                                  {hand.bNetProfit >= 0
+                                    ? `+¥${hand.bNetProfit}`
+                                    : `-¥${Math.abs(hand.bNetProfit)}`}
+                                </strong>
+                                )
+                              </span>
+                            ) : (
+                              <span className="text-amber-200/40">观望</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
