@@ -43,17 +43,76 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'shoes' | 'barchart' | 'curve' | 'details'>('shoes');
 
-  const handleExportCSV = () => {
+  const [copyNotice, setCopyNotice] = useState<string | null>(null);
+
+  const handleExportCSV = async () => {
     if (handResults.length === 0 && shoeHistory.length === 0) return;
     const csvStr = exportToCSV(handResults);
+    const fileName = `baccarat_session_${new Date().toISOString().slice(0, 10)}.csv`;
+
+    // Try modern File System Access API if supported (allows user to select save directory)
+    if ('showSaveFilePicker' in window) {
+      try {
+        const handle = await (window as any).showSaveFilePicker({
+          suggestedName: fileName,
+          types: [
+            {
+              description: 'CSV Document',
+              accept: { 'text/csv': ['.csv'] },
+            },
+          ],
+        });
+        const writable = await handle.createWritable();
+        await writable.write(csvStr);
+        await writable.close();
+        setCopyNotice('CSV 文件已成功另存为到您选择的位置！');
+        setTimeout(() => setCopyNotice(null), 3000);
+        return;
+      } catch (err: any) {
+        if (err.name === 'AbortError') return; // User canceled save dialog
+        console.warn('File picker failed, falling back to standard download:', err);
+      }
+    }
+
+    // Fallback: Standard browser automatic download
     const blob = new Blob([csvStr], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `baccarat_session_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute('download', fileName);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const handleCopyForAI = () => {
+    if (handResults.length === 0) {
+      alert('暂无对局明细数据，请先发牌产生对局！');
+      return;
+    }
+    const csvStr = exportToCSV(handResults);
+    const aiPrompt = `以下是百家乐对局模拟器导出的全部对局明细数据（CSV格式），请帮我进行策略与盈亏分析：
+【核心信息】
+- 总鞋数: ${totalShoesCount}靴 | 总手数: ${totalHandsCount}手
+- 玩家A累计盈亏: ¥${runningCumA}
+- 玩家B (无止盈): ¥${runningCumB} | B-1 (止盈3注): ¥${runningCumB1} | B-2 (止盈2注): ¥${runningCumB2}
+- 玩家C (无止盈): ¥${runningCumC} | C-1 (止盈3注): ¥${runningCumC1} | C-2 (止盈2注): ¥${runningCumC2}
+
+【请帮我分析】
+1. 各玩家（A及追打对家B/B-1/B-2/C/C-1/C-2）的胜率、期望收益及回撤风险。
+2. 止盈机制（2注与3注）在面对多靴连败/长龙时的风控有效性。
+3. 给出的追打策略建议。
+
+--- CSV 完整数据 ---
+${csvStr}
+--- 数据结束 ---`;
+
+    navigator.clipboard.writeText(aiPrompt).then(() => {
+      setCopyNotice('已复制 AI 分析数据与 Prompt 到剪贴板！可以直接粘贴给 AI 分析。');
+      setTimeout(() => setCopyNotice(null), 3500);
+    }).catch(() => {
+      alert('复制失败，请尝试使用“导出明细 (CSV)”下载文件。');
+    });
   };
 
   // Process current active shoe
@@ -224,14 +283,32 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({
           )}
           <button
             type="button"
+            onClick={handleCopyForAI}
+            disabled={handResults.length === 0}
+            className="px-3 py-1 rounded-lg bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 text-white font-bold text-xs border border-emerald-400 shadow transition-all active:scale-95 cursor-pointer font-sans flex items-center space-x-1"
+            title="一键复制完整对局CSV与AI分析指令，直接粘贴给 AI 分析"
+          >
+            <span>🤖</span>
+            <span>复制 AI 分析 Prompt</span>
+          </button>
+          <button
+            type="button"
             onClick={handleExportCSV}
             disabled={handResults.length === 0 && shoeHistory.length === 0}
             className="px-3 py-1 rounded-lg bg-[#b8860b] hover:bg-yellow-500 disabled:opacity-40 text-black font-bold text-xs border border-amber-300 shadow transition-all active:scale-95 cursor-pointer font-sans"
+            title="使用另存为下载 CSV 明细"
           >
             📥 导出明细 (CSV)
           </button>
         </div>
       </div>
+
+      {copyNotice && (
+        <div className="mb-3 px-3 py-2 bg-emerald-900/90 border border-emerald-400 text-emerald-200 text-xs rounded-lg font-sans flex items-center justify-between shadow-lg animate-fade-in">
+          <span>✨ {copyNotice}</span>
+          <button type="button" onClick={() => setCopyNotice(null)} className="text-emerald-300 font-bold ml-2">✕</button>
+        </div>
+      )}
 
       {/* GLOBAL SUMMARY STAT CARDS GRID */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 mb-4 font-sans text-xs">
