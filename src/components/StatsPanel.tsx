@@ -41,7 +41,7 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({
   c2Bankroll = 10000,
   onResetSession,
 }) => {
-  const [activeTab, setActiveTab] = useState<'shoes' | 'curve' | 'details'>('shoes');
+  const [activeTab, setActiveTab] = useState<'shoes' | 'barchart' | 'curve' | 'details'>('shoes');
 
   const handleExportCSV = () => {
     if (handResults.length === 0 && shoeHistory.length === 0) return;
@@ -296,7 +296,7 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({
       </div>
 
       {/* Tabs Header */}
-      <div className="flex border-b border-[#b8860b]/30 mb-3 text-xs font-sans">
+      <div className="flex flex-wrap border-b border-[#b8860b]/30 mb-3 text-xs font-sans gap-1">
         <button
           type="button"
           onClick={() => setActiveTab('shoes')}
@@ -308,8 +308,17 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({
         </button>
         <button
           type="button"
+          onClick={() => setActiveTab('barchart')}
+          className={`px-3 py-1.5 font-bold rounded-t-lg transition-colors cursor-pointer ${
+            activeTab === 'barchart' ? 'bg-[#b8860b] text-black shadow' : 'text-amber-200/70 hover:text-white bg-black/40'
+          }`}
+        >
+          📊 盈亏柱状图分析
+        </button>
+        <button
+          type="button"
           onClick={() => setActiveTab('curve')}
-          className={`px-3 py-1.5 font-bold rounded-t-lg transition-colors ml-1 cursor-pointer ${
+          className={`px-3 py-1.5 font-bold rounded-t-lg transition-colors cursor-pointer ${
             activeTab === 'curve' ? 'bg-[#b8860b] text-black shadow' : 'text-amber-200/70 hover:text-white bg-black/40'
           }`}
         >
@@ -318,7 +327,7 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({
         <button
           type="button"
           onClick={() => setActiveTab('details')}
-          className={`px-3 py-1.5 font-bold rounded-t-lg transition-colors ml-1 cursor-pointer ${
+          className={`px-3 py-1.5 font-bold rounded-t-lg transition-colors cursor-pointer ${
             activeTab === 'details' ? 'bg-[#b8860b] text-black shadow' : 'text-amber-200/70 hover:text-white bg-black/40'
           }`}
         >
@@ -398,7 +407,225 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({
         </div>
       )}
 
-      {/* TAB 2: BANKROLL CHART & MAX DRAWDOWNS */}
+      {/* TAB 2: BAR CHART ANALYSIS */}
+      {activeTab === 'barchart' && (
+        <div className="space-y-4 font-sans">
+          {/* Section 1: Overall Cumulative Net Profit Bar Chart */}
+          <div className="bg-black/75 p-4 rounded-xl border border-[#b8860b]/30">
+            <div className="flex flex-wrap items-center justify-between text-xs mb-3 gap-1">
+              <span className="text-amber-200 font-bold text-sm">📊 7位玩家总累计净盈亏柱状图对比 (A vs B/B-1/B-2 vs C/C-1/C-2)</span>
+              <span className="text-[10px] text-amber-200/60">* 绿色代表盈利，红色代表亏损</span>
+            </div>
+
+            {/* Bar Chart Container */}
+            {(() => {
+              const playerData = [
+                { id: 'A', name: '玩家A (我)', profit: runningCumA, color: '#d4af37', bgPos: 'from-amber-500 to-yellow-300' },
+                { id: 'B', name: '玩家B (无止盈)', profit: runningCumB, color: '#10b981', bgPos: 'from-emerald-600 to-emerald-400' },
+                { id: 'B-1', name: '玩家B-1 (止盈3注)', profit: runningCumB1, color: '#eab308', bgPos: 'from-yellow-600 to-yellow-400' },
+                { id: 'B-2', name: '玩家B-2 (止盈2注)', profit: runningCumB2, color: '#f59e0b', bgPos: 'from-amber-600 to-amber-400' },
+                { id: 'C', name: '玩家C (无止盈)', profit: runningCumC, color: '#38bdf8', bgPos: 'from-sky-600 to-sky-400' },
+                { id: 'C-1', name: '玩家C-1 (止盈3注)', profit: runningCumC1, color: '#06b6d4', bgPos: 'from-cyan-600 to-cyan-400' },
+                { id: 'C-2', name: '玩家C-2 (止盈2注)', profit: runningCumC2, color: '#0284c7', bgPos: 'from-blue-600 to-blue-400' },
+              ];
+
+              const maxAbs = Math.max(...playerData.map((p) => Math.abs(p.profit)), 500);
+
+              return (
+                <div className="space-y-4">
+                  {/* Vertical Bar Chart Box */}
+                  <div className="bg-black/80 border border-[#b8860b]/20 p-4 rounded-xl">
+                    <div className="h-60 relative flex items-center justify-around pt-8 pb-8">
+                      {/* Zero baseline line */}
+                      <div className="absolute left-0 right-0 top-1/2 h-0.5 bg-[#b8860b]/40 z-0" />
+                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] text-amber-200/40 font-mono">基准线 (¥0)</span>
+
+                      {playerData.map((p) => {
+                        const isPos = p.profit >= 0;
+                        const heightPercent = Math.min(100, Math.max(6, (Math.abs(p.profit) / maxAbs) * 80));
+
+                        return (
+                          <div key={p.id} className="relative flex flex-col items-center h-full w-1/8 max-w-[80px] z-10 group">
+                            {/* Positive Bar Container (Top Half) */}
+                            <div className="h-1/2 w-full flex flex-col justify-end items-center relative">
+                              {isPos && (
+                                <>
+                                  <span className="text-[10px] font-mono font-bold text-emerald-400 mb-1 transition-transform group-hover:scale-110">
+                                    +¥{p.profit}
+                                  </span>
+                                  <div
+                                    style={{ height: `${heightPercent}%` }}
+                                    className={`w-full max-w-[36px] bg-gradient-to-t ${p.bgPos} rounded-t-md shadow-[0_0_10px_rgba(16,185,129,0.3)] transition-all duration-500`}
+                                  />
+                                </>
+                              )}
+                            </div>
+
+                            {/* Negative Bar Container (Bottom Half) */}
+                            <div className="h-1/2 w-full flex flex-col justify-start items-center relative">
+                              {!isPos && (
+                                <>
+                                  <div
+                                    style={{ height: `${heightPercent}%` }}
+                                    className="w-full max-w-[36px] bg-gradient-to-b from-red-600 to-rose-400 rounded-b-md shadow-[0_0_10px_rgba(239,68,68,0.3)] transition-all duration-500"
+                                  />
+                                  <span className="text-[10px] font-mono font-bold text-red-400 mt-1 transition-transform group-hover:scale-110">
+                                    -¥{Math.abs(p.profit)}
+                                  </span>
+                                </>
+                              )}
+                            </div>
+
+                            {/* Bottom Label */}
+                            <div className="absolute -bottom-6 text-center">
+                              <span className="text-[11px] font-bold font-serif-casino block" style={{ color: p.color }}>
+                                {p.id}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Horizontal Detail Progress Bars */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 pt-2">
+                    {playerData.map((p) => {
+                      const isPos = p.profit >= 0;
+                      const widthPercent = Math.min(100, (Math.abs(p.profit) / maxAbs) * 100);
+
+                      return (
+                        <div key={p.id} className="bg-black/60 p-2.5 rounded-lg border border-[#b8860b]/20 flex items-center justify-between text-xs">
+                          <div className="w-28 flex items-center space-x-1.5">
+                            <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: p.color }} />
+                            <span className="font-bold text-amber-100 text-[11px] truncate">{p.name}</span>
+                          </div>
+                          <div className="flex-1 mx-3 bg-black/80 h-3 rounded-full overflow-hidden border border-amber-900/40 relative">
+                            <div
+                              style={{ width: `${widthPercent}%` }}
+                              className={`h-full rounded-full transition-all duration-500 ${
+                                isPos ? 'bg-gradient-to-r from-emerald-600 to-emerald-400' : 'bg-gradient-to-r from-red-600 to-rose-400'
+                              }`}
+                            />
+                          </div>
+                          <div className="w-20 text-right font-mono font-bold text-[11px]">
+                            <span className={isPos ? 'text-emerald-400' : 'text-red-400'}>
+                              {isPos ? `+¥${p.profit}` : `-¥${Math.abs(p.profit)}`}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+
+          {/* Section 2: Shoe-by-Shoe Bar Chart Comparison */}
+          <div className="bg-black/75 p-4 rounded-xl border border-[#b8860b]/30">
+            <div className="flex items-center justify-between text-xs mb-3">
+              <span className="text-amber-200 font-bold text-sm">🥿 各靴次玩家盈亏对比柱状图 ({processedShoes.length}靴)</span>
+            </div>
+
+            {processedShoes.length === 0 ? (
+              <div className="py-8 text-center text-xs text-amber-200/50 font-serif-casino">
+                暂无靴级数据生成柱状图 (开始发牌更换牌靴后实时显示)
+              </div>
+            ) : (
+              <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
+                {processedShoes.map((s) => {
+                  const shoePlayers = [
+                    { name: 'A', profit: s.aProfit, color: '#d4af37' },
+                    { name: 'B', profit: s.bProfit, color: '#10b981' },
+                    { name: 'B-1', profit: s.b1Profit ?? 0, color: '#eab308' },
+                    { name: 'B-2', profit: s.b2Profit ?? 0, color: '#f59e0b' },
+                    { name: 'C', profit: s.cProfit ?? 0, color: '#38bdf8' },
+                    { name: 'C-1', profit: s.c1Profit ?? 0, color: '#06b6d4' },
+                    { name: 'C-2', profit: s.c2Profit ?? 0, color: '#0284c7' },
+                  ];
+
+                  const maxShoeAbs = Math.max(...shoePlayers.map((p) => Math.abs(p.profit)), 200);
+
+                  return (
+                    <div key={s.shoeNumber} className="bg-black/80 p-3 rounded-lg border border-[#b8860b]/20">
+                      <div className="flex items-center justify-between text-xs mb-2">
+                        <span className="font-bold text-[#d4af37]">
+                          #{s.shoeNumber}靴 {s.isCurrent && <span className="text-[10px] text-amber-400 font-normal">(进行中)</span>} - 共{s.totalHands}手
+                        </span>
+                        <span className="text-[10px] text-amber-200/60 font-mono">
+                          庄{s.bankerWins} / 闲{s.playerWins} / 和{s.ties}
+                        </span>
+                      </div>
+
+                      {/* Bar group for this shoe */}
+                      <div className="grid grid-cols-7 gap-1.5 pt-1">
+                        {shoePlayers.map((p) => {
+                          const isPos = p.profit >= 0;
+                          const barWidth = Math.min(100, (Math.abs(p.profit) / maxShoeAbs) * 100);
+
+                          return (
+                            <div key={p.name} className="flex flex-col items-center bg-black/50 p-1.5 rounded border border-white/5">
+                              <span className="text-[10px] font-bold" style={{ color: p.color }}>
+                                {p.name}
+                              </span>
+                              <div className="w-full bg-black h-1.5 rounded-full my-1 overflow-hidden">
+                                <div
+                                  style={{ width: `${barWidth}%` }}
+                                  className={`h-full rounded-full ${isPos ? 'bg-emerald-400' : 'bg-red-500'}`}
+                                />
+                              </div>
+                              <span className={`text-[9px] font-mono font-bold ${isPos ? 'text-emerald-400' : 'text-red-400'}`}>
+                                {isPos ? `+${p.profit}` : p.profit}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Section 3: Chase Win Rate Comparison Bar Chart */}
+          <div className="bg-black/75 p-4 rounded-xl border border-[#b8860b]/30">
+            <div className="flex items-center justify-between text-xs mb-3">
+              <span className="text-amber-200 font-bold text-sm">🎯 追打对家胜率柱状图对比 (%)</span>
+            </div>
+
+            <div className="space-y-2.5">
+              {[
+                { name: '玩家A (我胜率)', winRate: parseFloat(aOverallWinRate), color: '#d4af37', label: `${stats.aTotalWins}胜/${stats.aTotalLosses}负` },
+                { name: '玩家B (无止盈)', winRate: parseFloat(bChaseWinRate), color: '#10b981', label: `${bState.chaseWinsB}胜/${bState.chaseLossesB}负` },
+                { name: '玩家B-1 (止盈3注)', winRate: parseFloat(b1ChaseWinRate), color: '#eab308', label: `${b1State?.chaseWins ?? 0}胜/${b1State?.chaseLosses ?? 0}负` },
+                { name: '玩家B-2 (止盈2注)', winRate: parseFloat(b2ChaseWinRate), color: '#f59e0b', label: `${b2State?.chaseWins ?? 0}胜/${b2State?.chaseLosses ?? 0}负` },
+                { name: '玩家C (无止盈)', winRate: parseFloat(cChaseWinRate), color: '#38bdf8', label: `${cState?.chaseWinsC ?? 0}胜/${cState?.chaseLossesC ?? 0}负` },
+                { name: '玩家C-1 (止盈3注)', winRate: parseFloat(c1ChaseWinRate), color: '#06b6d4', label: `${c1State?.chaseWins ?? 0}胜/${c1State?.chaseLosses ?? 0}负` },
+                { name: '玩家C-2 (止盈2注)', winRate: parseFloat(c2ChaseWinRate), color: '#0284c7', label: `${c2State?.chaseWins ?? 0}胜/${c2State?.chaseLosses ?? 0}负` },
+              ].map((item) => (
+                <div key={item.name} className="flex items-center text-xs space-x-3">
+                  <span className="w-32 font-bold text-amber-100 text-[11px] truncate" style={{ color: item.color }}>
+                    {item.name}
+                  </span>
+                  <div className="flex-1 bg-black/80 h-3.5 rounded-full overflow-hidden border border-amber-900/40 relative">
+                    <div
+                      style={{ width: `${Math.min(100, Math.max(0, item.winRate))}%` }}
+                      className="h-full rounded-full bg-gradient-to-r from-amber-600 to-yellow-400 transition-all duration-500"
+                    />
+                  </div>
+                  <div className="w-28 text-right font-mono font-bold text-[11px] text-amber-300">
+                    {item.winRate}% <span className="text-[9px] text-amber-200/50 font-normal">({item.label})</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 3: BANKROLL CHART & MAX DRAWDOWNS */}
       {activeTab === 'curve' && (
         <div className="space-y-3 font-sans">
           <div className="bg-black/75 p-3 rounded-xl border border-[#b8860b]/30">
