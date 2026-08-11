@@ -110,6 +110,7 @@ export default function App() {
 
   // History & Statistics
   const [handResults, setHandResults] = useState<HandResult[]>([]);
+  const [allHandResults, setAllHandResults] = useState<HandResult[]>([]);
   const [shoeHistory, setShoeHistory] = useState<ShoeRecord[]>([]);
   const [stats, setStats] = useState<GameStats>({
     aTotalHandsBet: 0,
@@ -166,6 +167,8 @@ export default function App() {
         if (parsed.stats) setStats(parsed.stats);
         if (parsed.settings) setSettings(parsed.settings);
         if (parsed.handResults) setHandResults(parsed.handResults);
+        if (parsed.allHandResults) setAllHandResults(parsed.allHandResults);
+        else if (parsed.handResults) setAllHandResults(parsed.handResults);
         if (parsed.shoeHistory) setShoeHistory(parsed.shoeHistory);
         if (parsed.totalHandCount) setTotalHandCount(parsed.totalHandCount);
       } catch (e) {
@@ -195,6 +198,7 @@ export default function App() {
         stats,
         settings,
         handResults,
+        allHandResults,
         shoeHistory,
         totalHandCount,
       };
@@ -392,6 +396,7 @@ export default function App() {
       });
 
       setHandResults([]);
+      setAllHandResults([]);
       setShoeHistory([]);
       setTotalHandCount(0);
       handleNewShoe();
@@ -805,6 +810,7 @@ export default function App() {
     setTotalHandCount(newHandNum);
     setShoeHandCount(newShoeHandNum);
     setHandResults((prev) => [...prev, handRes]);
+    setAllHandResults((prev) => [...prev, handRes]);
 
     // Update Statistics
     setStats((prev) => {
@@ -1030,6 +1036,7 @@ export default function App() {
             c1State={c1State}
             c2State={c2State}
             handResults={handResults}
+            allHandResults={allHandResults}
             shoeHistory={shoeHistory}
             aBankroll={aBankroll}
             bBankroll={bBankroll}

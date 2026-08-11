@@ -11,6 +11,7 @@ interface StatsPanelProps {
   c1State?: PlayerBotState;
   c2State?: PlayerBotState;
   handResults: HandResult[];
+  allHandResults?: HandResult[];
   shoeHistory: ShoeRecord[];
   aBankroll: number;
   bBankroll: number;
@@ -31,6 +32,7 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({
   c1State,
   c2State,
   handResults,
+  allHandResults = [],
   shoeHistory = [],
   aBankroll,
   bBankroll,
@@ -44,10 +46,11 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({
   const [activeTab, setActiveTab] = useState<'shoes' | 'barchart' | 'curve' | 'details'>('shoes');
 
   const [copyNotice, setCopyNotice] = useState<string | null>(null);
+  const effectiveAllHands = (allHandResults && allHandResults.length > 0) ? allHandResults : handResults;
 
   const handleExportCSV = async () => {
-    if (handResults.length === 0 && shoeHistory.length === 0) return;
-    const csvStr = exportToCSV(handResults);
+    if (effectiveAllHands.length === 0 && shoeHistory.length === 0) return;
+    const csvStr = exportToCSV(effectiveAllHands);
     const fileName = `baccarat_session_${new Date().toISOString().slice(0, 10)}.csv`;
 
     // Try modern File System Access API if supported (allows user to select save directory)
@@ -86,11 +89,11 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({
   };
 
   const handleCopyForAI = () => {
-    if (handResults.length === 0) {
+    if (effectiveAllHands.length === 0) {
       alert('暂无对局明细数据，请先发牌产生对局！');
       return;
     }
-    const csvStr = exportToCSV(handResults);
+    const csvStr = exportToCSV(effectiveAllHands);
     const aiPrompt = `以下是百家乐对局模拟器导出的全部对局明细数据（CSV格式），请帮我进行策略与盈亏分析：
 【核心信息】
 - 总鞋数: ${totalShoesCount}靴 | 总手数: ${totalHandsCount}手
@@ -205,10 +208,97 @@ ${csvStr}
 
   const aExhaustedWinRate = stats.aExhaustedHands > 0 ? ((stats.aExhaustedWins / stats.aExhaustedHands) * 100).toFixed(1) : '0.0';
 
+  // Dragon 7 Push / Side Bet Statistics Across All History
+  const allD7Hands = effectiveAllHands.filter((h) => h.isDragon7);
+  const d7TotalCount = allD7Hands.length;
+  const d7Percent = effectiveAllHands.length > 0 ? ((d7TotalCount / effectiveAllHands.length) * 100).toFixed(1) : '0.0';
+
+  const aD7SideBetHits = effectiveAllHands.filter((h) => h.isDragon7 && h.aBet.dragon7Amount > 0).length;
+  const aD7SideBetPayout = effectiveAllHands.reduce((sum, h) => sum + (h.isDragon7 ? h.aSidePayout : 0), 0);
+  const aD7BankerPushes = effectiveAllHands.filter((h) => h.isDragon7 && h.aBet.mainBet === 'BANKER').length;
+  const aD7PlayerLosses = effectiveAllHands.filter((h) => h.isDragon7 && h.aBet.mainBet === 'PLAYER').length;
+
+  const bD7BankerPushes = effectiveAllHands.filter((h) => h.isDragon7 && h.bBet?.mainBet === 'BANKER').length;
+  const bD7PlayerLosses = effectiveAllHands.filter((h) => h.isDragon7 && h.bBet?.mainBet === 'PLAYER').length;
+  const bD7NoBets = effectiveAllHands.filter((h) => h.isDragon7 && (!h.bBet || h.bBet.mainBet === null)).length;
+
+  const b1D7BankerPushes = effectiveAllHands.filter((h) => h.isDragon7 && h.b1Bet?.mainBet === 'BANKER').length;
+  const b1D7PlayerLosses = effectiveAllHands.filter((h) => h.isDragon7 && h.b1Bet?.mainBet === 'PLAYER').length;
+  const b1D7NoBets = effectiveAllHands.filter((h) => h.isDragon7 && (!h.b1Bet || h.b1Bet.mainBet === null)).length;
+
+  const b2D7BankerPushes = effectiveAllHands.filter((h) => h.isDragon7 && h.b2Bet?.mainBet === 'BANKER').length;
+  const b2D7PlayerLosses = effectiveAllHands.filter((h) => h.isDragon7 && h.b2Bet?.mainBet === 'PLAYER').length;
+  const b2D7NoBets = effectiveAllHands.filter((h) => h.isDragon7 && (!h.b2Bet || h.b2Bet.mainBet === null)).length;
+
+  const cD7BankerPushes = effectiveAllHands.filter((h) => h.isDragon7 && h.cBet?.mainBet === 'BANKER').length;
+  const cD7PlayerLosses = effectiveAllHands.filter((h) => h.isDragon7 && h.cBet?.mainBet === 'PLAYER').length;
+  const cD7NoBets = effectiveAllHands.filter((h) => h.isDragon7 && (!h.cBet || h.cBet.mainBet === null)).length;
+
+  const c1D7BankerPushes = effectiveAllHands.filter((h) => h.isDragon7 && h.c1Bet?.mainBet === 'BANKER').length;
+  const c1D7PlayerLosses = effectiveAllHands.filter((h) => h.isDragon7 && h.c1Bet?.mainBet === 'PLAYER').length;
+  const c1D7NoBets = effectiveAllHands.filter((h) => h.isDragon7 && (!h.c1Bet || h.c1Bet.mainBet === null)).length;
+
+  const c2D7BankerPushes = effectiveAllHands.filter((h) => h.isDragon7 && h.c2Bet?.mainBet === 'BANKER').length;
+  const c2D7PlayerLosses = effectiveAllHands.filter((h) => h.isDragon7 && h.c2Bet?.mainBet === 'PLAYER').length;
+  const c2D7NoBets = effectiveAllHands.filter((h) => h.isDragon7 && (!h.c2Bet || h.c2Bet.mainBet === null)).length;
+
+  // All-Time Historical Cumulative Trend Points (Normalized Origin = 0 for ALL players at Hand #0)
+  const allTimePoints = [
+    { handNumber: 0, aCum: 0, bCum: 0, b1Cum: 0, b2Cum: 0, cCum: 0, c1Cum: 0, c2Cum: 0 },
+    ...effectiveAllHands.map((h) => ({
+      handNumber: h.handNumber,
+      aCum: h.aBankrollAfter - 1000,
+      bCum: h.bBankrollAfter - 10000,
+      b1Cum: (h.b1BankrollAfter ?? 10000) - 10000,
+      b2Cum: (h.b2BankrollAfter ?? 10000) - 10000,
+      cCum: (h.cBankrollAfter ?? 10000) - 10000,
+      c1Cum: (h.c1BankrollAfter ?? 10000) - 10000,
+      c2Cum: (h.c2BankrollAfter ?? 10000) - 10000,
+    })),
+  ];
+
+  // Calculate All-Time Historical Max Drawdowns across allTimePoints
+  let peakA = 0, histMaxDDA = 0;
+  let peakB = 0, histMaxDDB = 0;
+  let peakB1 = 0, histMaxDDB1 = 0;
+  let peakB2 = 0, histMaxDDB2 = 0;
+  let peakC = 0, histMaxDDC = 0;
+  let peakC1 = 0, histMaxDDC1 = 0;
+  let peakC2 = 0, histMaxDDC2 = 0;
+
+  allTimePoints.forEach((p) => {
+    if (p.aCum > peakA) peakA = p.aCum;
+    const ddA = peakA - p.aCum;
+    if (ddA > histMaxDDA) histMaxDDA = ddA;
+
+    if (p.bCum > peakB) peakB = p.bCum;
+    const ddB = peakB - p.bCum;
+    if (ddB > histMaxDDB) histMaxDDB = ddB;
+
+    if (p.b1Cum > peakB1) peakB1 = p.b1Cum;
+    const ddB1 = peakB1 - p.b1Cum;
+    if (ddB1 > histMaxDDB1) histMaxDDB1 = ddB1;
+
+    if (p.b2Cum > peakB2) peakB2 = p.b2Cum;
+    const ddB2 = peakB2 - p.b2Cum;
+    if (ddB2 > histMaxDDB2) histMaxDDB2 = ddB2;
+
+    if (p.cCum > peakC) peakC = p.cCum;
+    const ddC = peakC - p.cCum;
+    if (ddC > histMaxDDC) histMaxDDC = ddC;
+
+    if (p.c1Cum > peakC1) peakC1 = p.c1Cum;
+    const ddC1 = peakC1 - p.c1Cum;
+    if (ddC1 > histMaxDDC1) histMaxDDC1 = ddC1;
+
+    if (p.c2Cum > peakC2) peakC2 = p.c2Cum;
+    const ddC2 = peakC2 - p.c2Cum;
+    if (ddC2 > histMaxDDC2) histMaxDDC2 = ddC2;
+  });
+
   // SVG Chart points
   const svgWidth = 600;
-  const svgHeight = 120;
-  const dataPoints = handResults.slice(-50);
+  const svgHeight = 130;
 
   let aPath = '';
   let bPath = '';
@@ -217,49 +307,32 @@ ${csvStr}
   let cPath = '';
   let c1Path = '';
   let c2Path = '';
+  let zeroY = 65;
 
-  if (dataPoints.length > 1) {
-    const minBankroll = Math.min(
-      ...dataPoints.map((d) =>
-        Math.min(
-          d.aBankrollAfter,
-          d.bBankrollAfter,
-          d.b1BankrollAfter ?? 10000,
-          d.b2BankrollAfter ?? 10000,
-          d.cBankrollAfter ?? 10000,
-          d.c1BankrollAfter ?? 10000,
-          d.c2BankrollAfter ?? 10000
-        )
-      ),
-      0
+  if (allTimePoints.length > 1) {
+    const minCum = Math.min(
+      ...allTimePoints.flatMap((d) => [d.aCum, d.bCum, d.b1Cum, d.b2Cum, d.cCum, d.c1Cum, d.c2Cum]),
+      -500
     );
-    const maxBankroll = Math.max(
-      ...dataPoints.map((d) =>
-        Math.max(
-          d.aBankrollAfter,
-          d.bBankrollAfter,
-          d.b1BankrollAfter ?? 10000,
-          d.b2BankrollAfter ?? 10000,
-          d.cBankrollAfter ?? 10000,
-          d.c1BankrollAfter ?? 10000,
-          d.c2BankrollAfter ?? 10000
-        )
-      ),
-      12000
+    const maxCum = Math.max(
+      ...allTimePoints.flatMap((d) => [d.aCum, d.bCum, d.b1Cum, d.b2Cum, d.cCum, d.c1Cum, d.c2Cum]),
+      500
     );
 
-    const range = maxBankroll - minBankroll || 1;
+    const range = maxCum - minCum || 1;
 
     const getSvgY = (val: number) =>
-      svgHeight - ((val - minBankroll) / range) * (svgHeight - 20) - 10;
+      svgHeight - ((val - minCum) / range) * (svgHeight - 24) - 12;
 
-    aPath = dataPoints.map((d, i) => `${i === 0 ? 'M' : 'L'} ${((i / (dataPoints.length - 1)) * svgWidth).toFixed(1)} ${getSvgY(d.aBankrollAfter).toFixed(1)}`).join(' ');
-    bPath = dataPoints.map((d, i) => `${i === 0 ? 'M' : 'L'} ${((i / (dataPoints.length - 1)) * svgWidth).toFixed(1)} ${getSvgY(d.bBankrollAfter).toFixed(1)}`).join(' ');
-    b1Path = dataPoints.map((d, i) => `${i === 0 ? 'M' : 'L'} ${((i / (dataPoints.length - 1)) * svgWidth).toFixed(1)} ${getSvgY(d.b1BankrollAfter ?? 10000).toFixed(1)}`).join(' ');
-    b2Path = dataPoints.map((d, i) => `${i === 0 ? 'M' : 'L'} ${((i / (dataPoints.length - 1)) * svgWidth).toFixed(1)} ${getSvgY(d.b2BankrollAfter ?? 10000).toFixed(1)}`).join(' ');
-    cPath = dataPoints.map((d, i) => `${i === 0 ? 'M' : 'L'} ${((i / (dataPoints.length - 1)) * svgWidth).toFixed(1)} ${getSvgY(d.cBankrollAfter ?? 10000).toFixed(1)}`).join(' ');
-    c1Path = dataPoints.map((d, i) => `${i === 0 ? 'M' : 'L'} ${((i / (dataPoints.length - 1)) * svgWidth).toFixed(1)} ${getSvgY(d.c1BankrollAfter ?? 10000).toFixed(1)}`).join(' ');
-    c2Path = dataPoints.map((d, i) => `${i === 0 ? 'M' : 'L'} ${((i / (dataPoints.length - 1)) * svgWidth).toFixed(1)} ${getSvgY(d.c2BankrollAfter ?? 10000).toFixed(1)}`).join(' ');
+    zeroY = getSvgY(0);
+
+    aPath = allTimePoints.map((d, i) => `${i === 0 ? 'M' : 'L'} ${((i / (allTimePoints.length - 1)) * svgWidth).toFixed(1)} ${getSvgY(d.aCum).toFixed(1)}`).join(' ');
+    bPath = allTimePoints.map((d, i) => `${i === 0 ? 'M' : 'L'} ${((i / (allTimePoints.length - 1)) * svgWidth).toFixed(1)} ${getSvgY(d.bCum).toFixed(1)}`).join(' ');
+    b1Path = allTimePoints.map((d, i) => `${i === 0 ? 'M' : 'L'} ${((i / (allTimePoints.length - 1)) * svgWidth).toFixed(1)} ${getSvgY(d.b1Cum).toFixed(1)}`).join(' ');
+    b2Path = allTimePoints.map((d, i) => `${i === 0 ? 'M' : 'L'} ${((i / (allTimePoints.length - 1)) * svgWidth).toFixed(1)} ${getSvgY(d.b2Cum).toFixed(1)}`).join(' ');
+    cPath = allTimePoints.map((d, i) => `${i === 0 ? 'M' : 'L'} ${((i / (allTimePoints.length - 1)) * svgWidth).toFixed(1)} ${getSvgY(d.cCum).toFixed(1)}`).join(' ');
+    c1Path = allTimePoints.map((d, i) => `${i === 0 ? 'M' : 'L'} ${((i / (allTimePoints.length - 1)) * svgWidth).toFixed(1)} ${getSvgY(d.c1Cum).toFixed(1)}`).join(' ');
+    c2Path = allTimePoints.map((d, i) => `${i === 0 ? 'M' : 'L'} ${((i / (allTimePoints.length - 1)) * svgWidth).toFixed(1)} ${getSvgY(d.c2Cum).toFixed(1)}`).join(' ');
   }
 
   const recent10Hands = [...handResults].reverse().slice(0, 10);
@@ -368,6 +441,179 @@ ${csvStr}
           <div className="text-[10px] font-mono mt-0.5 space-y-0.5">
             <div>C-1(3注): <strong className={runningCumC1 >= 0 ? 'text-emerald-400' : 'text-red-400'}>{runningCumC1 >= 0 ? `+¥${runningCumC1}` : `-¥${Math.abs(runningCumC1)}`}</strong></div>
             <div>C-2(2注): <strong className={runningCumC2 >= 0 ? 'text-emerald-400' : 'text-red-400'}>{runningCumC2 >= 0 ? `+¥${runningCumC2}` : `-¥${Math.abs(runningCumC2)}`}</strong></div>
+          </div>
+        </div>
+      </div>
+
+      {/* DEDICATED DRAGON 7 STATS SECTION */}
+      <div className="bg-gradient-to-r from-amber-950/80 via-black/85 to-amber-950/80 border border-[#b8860b]/50 rounded-xl p-3 mb-4 font-sans text-xs shadow-xl">
+        <div className="flex flex-wrap items-center justify-between border-b border-[#b8860b]/30 pb-2 mb-2.5 gap-2">
+          <div className="flex items-center space-x-2">
+            <span className="text-amber-300 font-bold text-sm flex items-center gap-1.5">
+              <span>🐲</span> 庄赢3张牌 (龙七 / Dragon 7) ～ 押庄不赢不输 (Push) 专项统计
+            </span>
+            <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-200 border border-amber-500/30 text-[10px] font-mono">
+              全历史触发: <strong className="text-amber-300 font-bold">{d7TotalCount}</strong> 次 ({d7Percent}%)
+            </span>
+          </div>
+          <span className="text-[10px] text-amber-200/60">
+            * EZ免水规则: 庄家3张牌7点获胜，押【庄】免扣抽水不赢不输(和局退注)；买中【龙7边注】40:1派彩
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-2">
+          {/* Player A */}
+          <div className="bg-black/70 p-2 rounded-lg border border-amber-500/40">
+            <div className="flex items-center justify-between font-bold text-amber-300 text-[11px] mb-1">
+              <span>玩家A (我)</span>
+              <span className="text-[9px] text-amber-200/60">自定下注</span>
+            </div>
+            <div className="space-y-0.5 text-[10px]">
+              <div className="flex justify-between text-amber-200 font-bold">
+                <span>买中龙7边注:</span>
+                <span className="text-amber-300 font-mono">{aD7SideBetHits}次 (+¥{aD7SideBetPayout})</span>
+              </div>
+              <div className="flex justify-between text-amber-200/80">
+                <span>押庄遇龙7退注:</span>
+                <span className="text-emerald-400 font-mono font-bold">{aD7BankerPushes}次</span>
+              </div>
+              <div className="flex justify-between text-amber-200/60">
+                <span>押闲遇龙7亏损:</span>
+                <span className="text-red-400 font-mono">{aD7PlayerLosses}次</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Player B */}
+          <div className="bg-black/70 p-2 rounded-lg border border-emerald-500/30">
+            <div className="flex items-center justify-between font-bold text-emerald-400 text-[11px] mb-1">
+              <span>玩家B</span>
+              <span className="text-[9px] text-emerald-300/60">无止盈</span>
+            </div>
+            <div className="space-y-0.5 text-[10px]">
+              <div className="flex justify-between text-emerald-200 font-bold">
+                <span>押庄不赢不输:</span>
+                <span className="text-emerald-400 font-mono">{bD7BankerPushes}次</span>
+              </div>
+              <div className="flex justify-between text-amber-200/60">
+                <span>押闲遇龙7亏损:</span>
+                <span className="text-red-400 font-mono">{bD7PlayerLosses}次</span>
+              </div>
+              <div className="flex justify-between text-amber-200/40">
+                <span>观望未下注:</span>
+                <span className="text-amber-200/50 font-mono">{bD7NoBets}次</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Player B-1 */}
+          <div className="bg-black/70 p-2 rounded-lg border border-yellow-500/30">
+            <div className="flex items-center justify-between font-bold text-yellow-400 text-[11px] mb-1">
+              <span>玩家B-1</span>
+              <span className="text-[9px] text-yellow-300/60">止盈3注</span>
+            </div>
+            <div className="space-y-0.5 text-[10px]">
+              <div className="flex justify-between text-yellow-200 font-bold">
+                <span>押庄不赢不输:</span>
+                <span className="text-emerald-400 font-mono">{b1D7BankerPushes}次</span>
+              </div>
+              <div className="flex justify-between text-amber-200/60">
+                <span>押闲遇龙7亏损:</span>
+                <span className="text-red-400 font-mono">{b1D7PlayerLosses}次</span>
+              </div>
+              <div className="flex justify-between text-amber-200/40">
+                <span>观望未下注:</span>
+                <span className="text-amber-200/50 font-mono">{b1D7NoBets}次</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Player B-2 */}
+          <div className="bg-black/70 p-2 rounded-lg border border-yellow-500/30">
+            <div className="flex items-center justify-between font-bold text-amber-400 text-[11px] mb-1">
+              <span>玩家B-2</span>
+              <span className="text-[9px] text-amber-300/60">止盈2注</span>
+            </div>
+            <div className="space-y-0.5 text-[10px]">
+              <div className="flex justify-between text-yellow-200 font-bold">
+                <span>押庄不赢不输:</span>
+                <span className="text-emerald-400 font-mono">{b2D7BankerPushes}次</span>
+              </div>
+              <div className="flex justify-between text-amber-200/60">
+                <span>押闲遇龙7亏损:</span>
+                <span className="text-red-400 font-mono">{b2D7PlayerLosses}次</span>
+              </div>
+              <div className="flex justify-between text-amber-200/40">
+                <span>观望未下注:</span>
+                <span className="text-amber-200/50 font-mono">{b2D7NoBets}次</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Player C */}
+          <div className="bg-black/70 p-2 rounded-lg border border-sky-500/30">
+            <div className="flex items-center justify-between font-bold text-sky-400 text-[11px] mb-1">
+              <span>玩家C</span>
+              <span className="text-[9px] text-sky-300/60">无止盈</span>
+            </div>
+            <div className="space-y-0.5 text-[10px]">
+              <div className="flex justify-between text-sky-200 font-bold">
+                <span>押庄不赢不输:</span>
+                <span className="text-emerald-400 font-mono">{cD7BankerPushes}次</span>
+              </div>
+              <div className="flex justify-between text-amber-200/60">
+                <span>押闲遇龙7亏损:</span>
+                <span className="text-red-400 font-mono">{cD7PlayerLosses}次</span>
+              </div>
+              <div className="flex justify-between text-amber-200/40">
+                <span>观望未下注:</span>
+                <span className="text-amber-200/50 font-mono">{cD7NoBets}次</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Player C-1 */}
+          <div className="bg-black/70 p-2 rounded-lg border border-cyan-500/30">
+            <div className="flex items-center justify-between font-bold text-cyan-400 text-[11px] mb-1">
+              <span>玩家C-1</span>
+              <span className="text-[9px] text-cyan-300/60">止盈3注</span>
+            </div>
+            <div className="space-y-0.5 text-[10px]">
+              <div className="flex justify-between text-cyan-200 font-bold">
+                <span>押庄不赢不输:</span>
+                <span className="text-emerald-400 font-mono">{c1D7BankerPushes}次</span>
+              </div>
+              <div className="flex justify-between text-amber-200/60">
+                <span>押闲遇龙7亏损:</span>
+                <span className="text-red-400 font-mono">{c1D7PlayerLosses}次</span>
+              </div>
+              <div className="flex justify-between text-amber-200/40">
+                <span>观望未下注:</span>
+                <span className="text-amber-200/50 font-mono">{c1D7NoBets}次</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Player C-2 */}
+          <div className="bg-black/70 p-2 rounded-lg border border-blue-500/30">
+            <div className="flex items-center justify-between font-bold text-blue-400 text-[11px] mb-1">
+              <span>玩家C-2</span>
+              <span className="text-[9px] text-blue-300/60">止盈2注</span>
+            </div>
+            <div className="space-y-0.5 text-[10px]">
+              <div className="flex justify-between text-blue-200 font-bold">
+                <span>押庄不赢不输:</span>
+                <span className="text-emerald-400 font-mono">{c2D7BankerPushes}次</span>
+              </div>
+              <div className="flex justify-between text-amber-200/60">
+                <span>押闲遇龙7亏损:</span>
+                <span className="text-red-400 font-mono">{c2D7PlayerLosses}次</span>
+              </div>
+              <div className="flex justify-between text-amber-200/40">
+                <span>观望未下注:</span>
+                <span className="text-amber-200/50 font-mono">{c2D7NoBets}次</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -706,16 +952,26 @@ ${csvStr}
       {activeTab === 'curve' && (
         <div className="space-y-3 font-sans">
           <div className="bg-black/75 p-3 rounded-xl border border-[#b8860b]/30">
-            <div className="flex items-center justify-between text-xs mb-2">
-              <span className="text-amber-200 font-bold">📈 近50手资金走势对比 (A, B, B-1, B-2, C, C-1, C-2)</span>
+            <div className="flex flex-wrap items-center justify-between text-xs mb-2 gap-2">
+              <span className="text-amber-200 font-bold">
+                📈 全历史资金累积走势发散图 (全共 {allTimePoints.length - 1} 手对局)
+              </span>
+              <span className="text-[10px] text-amber-200/60">
+                * 所有玩家初始点均对齐于原点 ¥0 变动基准线，根据历史净盈亏向外发散
+              </span>
             </div>
 
-            {dataPoints.length > 1 ? (
-              <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} className="w-full h-32 overflow-visible">
-                <line x1="0" y1="20" x2={svgWidth} y2="20" stroke="rgba(184,134,11,0.2)" strokeDasharray="3 3" />
-                <line x1="0" y1="60" x2={svgWidth} y2="60" stroke="rgba(184,134,11,0.2)" strokeDasharray="3 3" />
-                <line x1="0" y1="100" x2={svgWidth} y2="100" stroke="rgba(184,134,11,0.2)" strokeDasharray="3 3" />
+            {allTimePoints.length > 1 ? (
+              <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} className="w-full h-36 overflow-visible">
+                {/* Background Grid Lines */}
+                <line x1="0" y1="15" x2={svgWidth} y2="15" stroke="rgba(184,134,11,0.15)" strokeDasharray="3 3" />
+                <line x1="0" y1="115" x2={svgWidth} y2="115" stroke="rgba(184,134,11,0.15)" strokeDasharray="3 3" />
 
+                {/* Origin Zero Baseline (¥0 Baseline) */}
+                <line x1="0" y1={zeroY} x2={svgWidth} y2={zeroY} stroke="rgba(255, 215, 0, 0.45)" strokeWidth="1.5" strokeDasharray="3 2" />
+                <text x="5" y={zeroY - 4} fill="rgba(255, 215, 0, 0.7)" fontSize="9" fontFamily="monospace">基准原点 (¥0)</text>
+
+                {/* Player Cumulative Curves */}
                 <path d={aPath} fill="none" stroke="#d4af37" strokeWidth="2.5" />
                 <path d={bPath} fill="none" stroke="#10b981" strokeWidth="2" />
                 <path d={b1Path} fill="none" stroke="#eab308" strokeWidth="1.5" strokeDasharray="4 2" />
@@ -743,15 +999,39 @@ ${csvStr}
 
           {/* Drawdowns */}
           <div className="bg-black/75 p-3 rounded-xl border border-[#b8860b]/30 text-xs">
-            <span className="text-amber-200/70 block font-bold mb-2">最大回撤 (Max Drawdown):</span>
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-amber-200/90 font-bold">📉 历史全过程最大回撤 (Historical Max Drawdown):</span>
+              <span className="text-[10px] text-amber-200/50">* 从历史峰值资金下跌的最大幅度</span>
+            </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 font-mono text-[11px]">
-              <div>A: <strong className="text-red-400">¥{stats.aMaxDrawdown.toLocaleString()}</strong></div>
-              <div>B: <strong className="text-red-400">¥{stats.bMaxDrawdown.toLocaleString()}</strong></div>
-              <div>B-1: <strong className="text-red-400">¥{(stats.b1MaxDrawdown ?? 0).toLocaleString()}</strong></div>
-              <div>B-2: <strong className="text-red-400">¥{(stats.b2MaxDrawdown ?? 0).toLocaleString()}</strong></div>
-              <div>C: <strong className="text-red-400">¥{(stats.cMaxDrawdown ?? 0).toLocaleString()}</strong></div>
-              <div>C-1: <strong className="text-red-400">¥{(stats.c1MaxDrawdown ?? 0).toLocaleString()}</strong></div>
-              <div>C-2: <strong className="text-red-400">¥{(stats.c2MaxDrawdown ?? 0).toLocaleString()}</strong></div>
+              <div className="bg-black/50 p-2 rounded border border-amber-500/20 text-center">
+                <span className="text-[#d4af37] block text-[10px] font-sans">玩家A</span>
+                <strong className="text-red-400">¥{histMaxDDA.toLocaleString()}</strong>
+              </div>
+              <div className="bg-black/50 p-2 rounded border border-emerald-500/20 text-center">
+                <span className="text-emerald-400 block text-[10px] font-sans">玩家B</span>
+                <strong className="text-red-400">¥{histMaxDDB.toLocaleString()}</strong>
+              </div>
+              <div className="bg-black/50 p-2 rounded border border-yellow-500/20 text-center">
+                <span className="text-yellow-400 block text-[10px] font-sans">玩家B-1</span>
+                <strong className="text-red-400">¥{histMaxDDB1.toLocaleString()}</strong>
+              </div>
+              <div className="bg-black/50 p-2 rounded border border-yellow-500/20 text-center">
+                <span className="text-amber-400 block text-[10px] font-sans">玩家B-2</span>
+                <strong className="text-red-400">¥{histMaxDDB2.toLocaleString()}</strong>
+              </div>
+              <div className="bg-black/50 p-2 rounded border border-sky-500/20 text-center">
+                <span className="text-sky-400 block text-[10px] font-sans">玩家C</span>
+                <strong className="text-red-400">¥{histMaxDDC.toLocaleString()}</strong>
+              </div>
+              <div className="bg-black/50 p-2 rounded border border-cyan-500/20 text-center">
+                <span className="text-cyan-400 block text-[10px] font-sans">玩家C-1</span>
+                <strong className="text-red-400">¥{histMaxDDC1.toLocaleString()}</strong>
+              </div>
+              <div className="bg-black/50 p-2 rounded border border-blue-500/20 text-center">
+                <span className="text-blue-400 block text-[10px] font-sans">玩家C-2</span>
+                <strong className="text-red-400">¥{histMaxDDC2.toLocaleString()}</strong>
+              </div>
             </div>
           </div>
         </div>
