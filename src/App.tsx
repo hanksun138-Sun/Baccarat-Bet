@@ -7,6 +7,7 @@ import { SettingsModal } from './components/SettingsModal';
 import { RechargeModal, RechargePlayer } from './components/RechargeModal';
 import {
   Card,
+  D7Stats,
   GameSettings,
   GameStats,
   HandResult,
@@ -16,6 +17,8 @@ import {
   PlayerBotState,
   PlayerCState,
   ShoeRecord,
+  TrendPoint,
+  initialD7Stats,
 } from './types';
 import {
   calculateHandScore,
@@ -112,6 +115,10 @@ export default function App() {
   const [handResults, setHandResults] = useState<HandResult[]>([]);
   const [allHandResults, setAllHandResults] = useState<HandResult[]>([]);
   const [shoeHistory, setShoeHistory] = useState<ShoeRecord[]>([]);
+  const [d7Stats, setD7Stats] = useState<D7Stats>(initialD7Stats);
+  const [trendPoints, setTrendPoints] = useState<TrendPoint[]>([
+    { handNumber: 0, aCum: 0, bCum: 0, b1Cum: 0, b2Cum: 0, cCum: 0, c1Cum: 0, c2Cum: 0 },
+  ]);
   const [stats, setStats] = useState<GameStats>({
     aTotalHandsBet: 0,
     aTotalWins: 0,
@@ -167,10 +174,72 @@ export default function App() {
         if (parsed.stats) setStats(parsed.stats);
         if (parsed.settings) setSettings(parsed.settings);
         if (parsed.handResults) setHandResults(parsed.handResults);
+        
+        const handsForInit: HandResult[] = parsed.allHandResults || parsed.handResults || [];
         if (parsed.allHandResults) setAllHandResults(parsed.allHandResults);
         else if (parsed.handResults) setAllHandResults(parsed.handResults);
+        
         if (parsed.shoeHistory) setShoeHistory(parsed.shoeHistory);
         if (parsed.totalHandCount) setTotalHandCount(parsed.totalHandCount);
+
+        if (parsed.d7Stats) {
+          setD7Stats(parsed.d7Stats);
+        } else if (handsForInit.length > 0) {
+          const reconstructedD7: D7Stats = { ...initialD7Stats };
+          handsForInit.forEach((h) => {
+            if (h.isDragon7) {
+              reconstructedD7.d7TotalCount++;
+              if (h.aBet.dragon7Amount > 0) reconstructedD7.aD7SideBetHits++;
+              reconstructedD7.aD7SideBetPayout += h.aSidePayout || 0;
+              if (h.aBet.mainBet === 'BANKER') reconstructedD7.aD7BankerPushes++;
+              if (h.aBet.mainBet === 'PLAYER') reconstructedD7.aD7PlayerLosses++;
+
+              if (h.bBet?.mainBet === 'BANKER') reconstructedD7.bD7BankerPushes++;
+              if (h.bBet?.mainBet === 'PLAYER') reconstructedD7.bD7PlayerLosses++;
+              if (!h.bBet || h.bBet.mainBet === null) reconstructedD7.bD7NoBets++;
+
+              if (h.b1Bet?.mainBet === 'BANKER') reconstructedD7.b1D7BankerPushes++;
+              if (h.b1Bet?.mainBet === 'PLAYER') reconstructedD7.b1D7PlayerLosses++;
+              if (!h.b1Bet || h.b1Bet.mainBet === null) reconstructedD7.b1D7NoBets++;
+
+              if (h.b2Bet?.mainBet === 'BANKER') reconstructedD7.b2D7BankerPushes++;
+              if (h.b2Bet?.mainBet === 'PLAYER') reconstructedD7.b2D7PlayerLosses++;
+              if (!h.b2Bet || h.b2Bet.mainBet === null) reconstructedD7.b2D7NoBets++;
+
+              if (h.cBet?.mainBet === 'BANKER') reconstructedD7.cD7BankerPushes++;
+              if (h.cBet?.mainBet === 'PLAYER') reconstructedD7.cD7PlayerLosses++;
+              if (!h.cBet || h.cBet.mainBet === null) reconstructedD7.cD7NoBets++;
+
+              if (h.c1Bet?.mainBet === 'BANKER') reconstructedD7.c1D7BankerPushes++;
+              if (h.c1Bet?.mainBet === 'PLAYER') reconstructedD7.c1D7PlayerLosses++;
+              if (!h.c1Bet || h.c1Bet.mainBet === null) reconstructedD7.c1D7NoBets++;
+
+              if (h.c2Bet?.mainBet === 'BANKER') reconstructedD7.c2D7BankerPushes++;
+              if (h.c2Bet?.mainBet === 'PLAYER') reconstructedD7.c2D7PlayerLosses++;
+              if (!h.c2Bet || h.c2Bet.mainBet === null) reconstructedD7.c2D7NoBets++;
+            }
+          });
+          setD7Stats(reconstructedD7);
+        }
+
+        if (parsed.trendPoints) {
+          setTrendPoints(parsed.trendPoints);
+        } else if (handsForInit.length > 0) {
+          const reconstructedPts: TrendPoint[] = [
+            { handNumber: 0, aCum: 0, bCum: 0, b1Cum: 0, b2Cum: 0, cCum: 0, c1Cum: 0, c2Cum: 0 },
+            ...handsForInit.map((h) => ({
+              handNumber: h.handNumber,
+              aCum: h.aBankrollAfter - 1000,
+              bCum: h.bBankrollAfter - 10000,
+              b1Cum: (h.b1BankrollAfter ?? 10000) - 10000,
+              b2Cum: (h.b2BankrollAfter ?? 10000) - 10000,
+              cCum: (h.cBankrollAfter ?? 10000) - 10000,
+              c1Cum: (h.c1BankrollAfter ?? 10000) - 10000,
+              c2Cum: (h.c2BankrollAfter ?? 10000) - 10000,
+            })),
+          ];
+          setTrendPoints(reconstructedPts);
+        }
       } catch (e) {
         console.error('Failed to parse saved session:', e);
       }
@@ -178,31 +247,42 @@ export default function App() {
     initializeShoe(settings.prngSeed);
   }, []);
 
-  // Save session state to localStorage on update
+  // Save session state to localStorage on update (debounced to avoid performance bottlenecks in fast auto-play)
   useEffect(() => {
     if (totalHandCount > 0 || shoeHistory.length > 0) {
-      const stateToSave = {
-        aBankroll,
-        bBankroll,
-        b1Bankroll,
-        b2Bankroll,
-        cBankroll,
-        c1Bankroll,
-        c2Bankroll,
-        bState,
-        b1State,
-        b2State,
-        cState,
-        c1State,
-        c2State,
-        stats,
-        settings,
-        handResults,
-        allHandResults,
-        shoeHistory,
-        totalHandCount,
-      };
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(stateToSave));
+      const timer = setTimeout(() => {
+        const stateToSave = {
+          aBankroll,
+          bBankroll,
+          b1Bankroll,
+          b2Bankroll,
+          cBankroll,
+          c1Bankroll,
+          c2Bankroll,
+          bState,
+          b1State,
+          b2State,
+          cState,
+          c1State,
+          c2State,
+          stats,
+          d7Stats,
+          trendPoints,
+          settings,
+          handResults,
+          allHandResults: allHandResults.slice(-300),
+          shoeHistory: shoeHistory.slice(-5000),
+          totalHandCount,
+        };
+
+        try {
+          localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(stateToSave));
+        } catch (err) {
+          console.warn('LocalStorage save limit reached:', err);
+        }
+      }, 1000);
+
+      return () => clearTimeout(timer);
     }
   }, [
     aBankroll,
@@ -219,8 +299,11 @@ export default function App() {
     c1State,
     c2State,
     stats,
+    d7Stats,
+    trendPoints,
     settings,
     handResults,
+    allHandResults,
     shoeHistory,
     totalHandCount,
   ]);
@@ -395,6 +478,10 @@ export default function App() {
         c2MaxDrawdown: 0,
       });
 
+      setD7Stats(initialD7Stats);
+      setTrendPoints([
+        { handNumber: 0, aCum: 0, bCum: 0, b1Cum: 0, b2Cum: 0, cCum: 0, c1Cum: 0, c2Cum: 0 },
+      ]);
       setHandResults([]);
       setAllHandResults([]);
       setShoeHistory([]);
@@ -810,7 +897,68 @@ export default function App() {
     setTotalHandCount(newHandNum);
     setShoeHandCount(newShoeHandNum);
     setHandResults((prev) => [...prev, handRes]);
-    setAllHandResults((prev) => [...prev, handRes]);
+    setAllHandResults((prev) => {
+      const updated = [...prev, handRes];
+      return updated.length > 1000 ? updated.slice(-1000) : updated;
+    });
+
+    // Update Dragon 7 Incremental Stats
+    if (handRes.isDragon7) {
+      setD7Stats((prev) => ({
+        d7TotalCount: prev.d7TotalCount + 1,
+        aD7SideBetHits: prev.aD7SideBetHits + (handRes.aBet.dragon7Amount > 0 ? 1 : 0),
+        aD7SideBetPayout: prev.aD7SideBetPayout + handRes.aSidePayout,
+        aD7BankerPushes: prev.aD7BankerPushes + (handRes.aBet.mainBet === 'BANKER' ? 1 : 0),
+        aD7PlayerLosses: prev.aD7PlayerLosses + (handRes.aBet.mainBet === 'PLAYER' ? 1 : 0),
+
+        bD7BankerPushes: prev.bD7BankerPushes + (handRes.bBet?.mainBet === 'BANKER' ? 1 : 0),
+        bD7PlayerLosses: prev.bD7PlayerLosses + (handRes.bBet?.mainBet === 'PLAYER' ? 1 : 0),
+        bD7NoBets: prev.bD7NoBets + (!handRes.bBet || handRes.bBet.mainBet === null ? 1 : 0),
+
+        b1D7BankerPushes: prev.b1D7BankerPushes + (handRes.b1Bet?.mainBet === 'BANKER' ? 1 : 0),
+        b1D7PlayerLosses: prev.b1D7PlayerLosses + (handRes.b1Bet?.mainBet === 'PLAYER' ? 1 : 0),
+        b1D7NoBets: prev.b1D7NoBets + (!handRes.b1Bet || handRes.b1Bet.mainBet === null ? 1 : 0),
+
+        b2D7BankerPushes: prev.b2D7BankerPushes + (handRes.b2Bet?.mainBet === 'BANKER' ? 1 : 0),
+        b2D7PlayerLosses: prev.b2D7PlayerLosses + (handRes.b2Bet?.mainBet === 'PLAYER' ? 1 : 0),
+        b2D7NoBets: prev.b2D7NoBets + (!handRes.b2Bet || handRes.b2Bet.mainBet === null ? 1 : 0),
+
+        cD7BankerPushes: prev.cD7BankerPushes + (handRes.cBet?.mainBet === 'BANKER' ? 1 : 0),
+        cD7PlayerLosses: prev.cD7PlayerLosses + (handRes.cBet?.mainBet === 'PLAYER' ? 1 : 0),
+        cD7NoBets: prev.cD7NoBets + (!handRes.cBet || handRes.cBet.mainBet === null ? 1 : 0),
+
+        c1D7BankerPushes: prev.c1D7BankerPushes + (handRes.c1Bet?.mainBet === 'BANKER' ? 1 : 0),
+        c1D7PlayerLosses: prev.c1D7PlayerLosses + (handRes.c1Bet?.mainBet === 'PLAYER' ? 1 : 0),
+        c1D7NoBets: prev.c1D7NoBets + (!handRes.c1Bet || handRes.c1Bet.mainBet === null ? 1 : 0),
+
+        c2D7BankerPushes: prev.c2D7BankerPushes + (handRes.c2Bet?.mainBet === 'BANKER' ? 1 : 0),
+        c2D7PlayerLosses: prev.c2D7PlayerLosses + (handRes.c2Bet?.mainBet === 'PLAYER' ? 1 : 0),
+        c2D7NoBets: prev.c2D7NoBets + (!handRes.c2Bet || handRes.c2Bet.mainBet === null ? 1 : 0),
+      }));
+    }
+
+    // Update Trend Points (Keep array small with downsampling if over 2000 points)
+    const newTrendPt: TrendPoint = {
+      handNumber: newHandNum,
+      aCum: aBankrollAfter - 1000,
+      bCum: bRes.bankrollAfter - 10000,
+      b1Cum: (b1Res.bankrollAfter ?? 10000) - 10000,
+      b2Cum: (b2Res.bankrollAfter ?? 10000) - 10000,
+      cCum: (cRes.bankrollAfter ?? 10000) - 10000,
+      c1Cum: (c1Res.bankrollAfter ?? 10000) - 10000,
+      c2Cum: (c2Res.bankrollAfter ?? 10000) - 10000,
+    };
+
+    setTrendPoints((prev) => {
+      const updated = [...prev, newTrendPt];
+      if (updated.length > 2000) {
+        const first = updated[0];
+        const last = updated[updated.length - 1];
+        const middle = updated.slice(1, -1).filter((_, idx) => idx % 2 === 0);
+        return [first, ...middle, last];
+      }
+      return updated;
+    });
 
     // Update Statistics
     setStats((prev) => {
@@ -1029,6 +1177,8 @@ export default function App() {
           {/* Statistics & Analysis Panel */}
           <StatsPanel
             stats={stats}
+            d7Stats={d7Stats}
+            trendPoints={trendPoints}
             bState={bState}
             b1State={b1State}
             b2State={b2State}

@@ -225,3 +225,73 @@ export interface GameStats {
   c2MaxBankroll?: number;
   c2MaxDrawdown?: number;
 }
+
+export interface D7Stats {
+  d7TotalCount: number;
+  aD7SideBetHits: number;
+  aD7SideBetPayout: number;
+  aD7BankerPushes: number;
+  aD7PlayerLosses: number;
+
+  bD7BankerPushes: number;
+  bD7PlayerLosses: number;
+  bD7NoBets: number;
+
+  b1D7BankerPushes: number;
+  b1D7PlayerLosses: number;
+  b1D7NoBets: number;
+
+  b2D7BankerPushes: number;
+  b2D7PlayerLosses: number;
+  b2D7NoBets: number;
+
+  cD7BankerPushes: number;
+  cD7PlayerLosses: number;
+  cD7NoBets: number;
+
+  c1D7BankerPushes: number;
+  c1D7PlayerLosses: number;
+  c1D7NoBets: number;
+
+  c2D7BankerPushes: number;
+  c2D7PlayerLosses: number;
+  c2D7NoBets: number;
+}
+
+export interface TrendPoint {
+  handNumber: number;
+  aCum: number;
+  bCum: number;
+  b1Cum: number;
+  b2Cum: number;
+  cCum: number;
+  c1Cum: number;
+  c2Cum: number;
+}
+
+export const initialD7Stats: D7Stats = {
+  d7TotalCount: 0,
+  aD7SideBetHits: 0,
+  aD7SideBetPayout: 0,
+  aD7BankerPushes: 0,
+  aD7PlayerLosses: 0,
+  bD7BankerPushes: 0,
+  bD7PlayerLosses: 0,
+  bD7NoBets: 0,
+  b1D7BankerPushes: 0,
+  b1D7PlayerLosses: 0,
+  b1D7NoBets: 0,
+  b2D7BankerPushes: 0,
+  b2D7PlayerLosses: 0,
+  b2D7NoBets: 0,
+  cD7BankerPushes: 0,
+  cD7PlayerLosses: 0,
+  cD7NoBets: 0,
+  c1D7BankerPushes: 0,
+  c1D7PlayerLosses: 0,
+  c1D7NoBets: 0,
+  c2D7BankerPushes: 0,
+  c2D7PlayerLosses: 0,
+  c2D7NoBets: 0,
+};
+

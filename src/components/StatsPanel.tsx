@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { GameStats, HandResult, PlayerBState, PlayerBotState, PlayerCState, ShoeRecord } from '../types';
+import { D7Stats, GameStats, HandResult, PlayerBState, PlayerBotState, PlayerCState, ShoeRecord, TrendPoint } from '../types';
 import { exportToCSV } from '../utils/baccarat';
 
 interface StatsPanelProps {
   stats: GameStats;
+  d7Stats?: D7Stats;
+  trendPoints?: TrendPoint[];
   bState: PlayerBState;
   b1State?: PlayerBotState;
   b2State?: PlayerBotState;
@@ -25,6 +27,8 @@ interface StatsPanelProps {
 
 export const StatsPanel: React.FC<StatsPanelProps> = ({
   stats,
+  d7Stats,
+  trendPoints,
   bState,
   b1State,
   b2State,
@@ -124,7 +128,7 @@ ${csvStr}
   const currentShoeProfitB = handResults.reduce((s, h) => s + h.bNetProfit, 0);
   const currentShoeProfitB1 = handResults.reduce((s, h) => s + (h.b1NetProfit ?? 0), 0);
   const currentShoeProfitB2 = handResults.reduce((s, h) => s + (h.b2NetProfit ?? 0), 0);
-  const currentShoeProfitC = handResults.reduce((s, h) => s + (h.cNetProfit ?? 0), 0);
+  const currentShoeProfitC = handResults.reduce((s, h) => s + h.cNetProfit, 0);
   const currentShoeProfitC1 = handResults.reduce((s, h) => s + (h.c1NetProfit ?? 0), 0);
   const currentShoeProfitC2 = handResults.reduce((s, h) => s + (h.c2NetProfit ?? 0), 0);
 
@@ -209,92 +213,64 @@ ${csvStr}
   const aExhaustedWinRate = stats.aExhaustedHands > 0 ? ((stats.aExhaustedWins / stats.aExhaustedHands) * 100).toFixed(1) : '0.0';
 
   // Dragon 7 Push / Side Bet Statistics Across All History
-  const allD7Hands = effectiveAllHands.filter((h) => h.isDragon7);
-  const d7TotalCount = allD7Hands.length;
-  const d7Percent = effectiveAllHands.length > 0 ? ((d7TotalCount / effectiveAllHands.length) * 100).toFixed(1) : '0.0';
+  const d7TotalCount = d7Stats ? d7Stats.d7TotalCount : effectiveAllHands.filter((h) => h.isDragon7).length;
+  const totalHandsForD7 = totalHandsCount > 0 ? totalHandsCount : (effectiveAllHands.length || 1);
+  const d7Percent = ((d7TotalCount / totalHandsForD7) * 100).toFixed(1);
 
-  const aD7SideBetHits = effectiveAllHands.filter((h) => h.isDragon7 && h.aBet.dragon7Amount > 0).length;
-  const aD7SideBetPayout = effectiveAllHands.reduce((sum, h) => sum + (h.isDragon7 ? h.aSidePayout : 0), 0);
-  const aD7BankerPushes = effectiveAllHands.filter((h) => h.isDragon7 && h.aBet.mainBet === 'BANKER').length;
-  const aD7PlayerLosses = effectiveAllHands.filter((h) => h.isDragon7 && h.aBet.mainBet === 'PLAYER').length;
+  const aD7SideBetHits = d7Stats ? d7Stats.aD7SideBetHits : effectiveAllHands.filter((h) => h.isDragon7 && h.aBet.dragon7Amount > 0).length;
+  const aD7SideBetPayout = d7Stats ? d7Stats.aD7SideBetPayout : effectiveAllHands.reduce((sum, h) => sum + (h.isDragon7 ? h.aSidePayout : 0), 0);
+  const aD7BankerPushes = d7Stats ? d7Stats.aD7BankerPushes : effectiveAllHands.filter((h) => h.isDragon7 && h.aBet.mainBet === 'BANKER').length;
+  const aD7PlayerLosses = d7Stats ? d7Stats.aD7PlayerLosses : effectiveAllHands.filter((h) => h.isDragon7 && h.aBet.mainBet === 'PLAYER').length;
 
-  const bD7BankerPushes = effectiveAllHands.filter((h) => h.isDragon7 && h.bBet?.mainBet === 'BANKER').length;
-  const bD7PlayerLosses = effectiveAllHands.filter((h) => h.isDragon7 && h.bBet?.mainBet === 'PLAYER').length;
-  const bD7NoBets = effectiveAllHands.filter((h) => h.isDragon7 && (!h.bBet || h.bBet.mainBet === null)).length;
+  const bD7BankerPushes = d7Stats ? d7Stats.bD7BankerPushes : effectiveAllHands.filter((h) => h.isDragon7 && h.bBet?.mainBet === 'BANKER').length;
+  const bD7PlayerLosses = d7Stats ? d7Stats.bD7PlayerLosses : effectiveAllHands.filter((h) => h.isDragon7 && h.bBet?.mainBet === 'PLAYER').length;
+  const bD7NoBets = d7Stats ? d7Stats.bD7NoBets : effectiveAllHands.filter((h) => h.isDragon7 && (!h.bBet || h.bBet.mainBet === null)).length;
 
-  const b1D7BankerPushes = effectiveAllHands.filter((h) => h.isDragon7 && h.b1Bet?.mainBet === 'BANKER').length;
-  const b1D7PlayerLosses = effectiveAllHands.filter((h) => h.isDragon7 && h.b1Bet?.mainBet === 'PLAYER').length;
-  const b1D7NoBets = effectiveAllHands.filter((h) => h.isDragon7 && (!h.b1Bet || h.b1Bet.mainBet === null)).length;
+  const b1D7BankerPushes = d7Stats ? d7Stats.b1D7BankerPushes : effectiveAllHands.filter((h) => h.isDragon7 && h.b1Bet?.mainBet === 'BANKER').length;
+  const b1D7PlayerLosses = d7Stats ? d7Stats.b1D7PlayerLosses : effectiveAllHands.filter((h) => h.isDragon7 && h.b1Bet?.mainBet === 'PLAYER').length;
+  const b1D7NoBets = d7Stats ? d7Stats.b1D7NoBets : effectiveAllHands.filter((h) => h.isDragon7 && (!h.b1Bet || h.b1Bet.mainBet === null)).length;
 
-  const b2D7BankerPushes = effectiveAllHands.filter((h) => h.isDragon7 && h.b2Bet?.mainBet === 'BANKER').length;
-  const b2D7PlayerLosses = effectiveAllHands.filter((h) => h.isDragon7 && h.b2Bet?.mainBet === 'PLAYER').length;
-  const b2D7NoBets = effectiveAllHands.filter((h) => h.isDragon7 && (!h.b2Bet || h.b2Bet.mainBet === null)).length;
+  const b2D7BankerPushes = d7Stats ? d7Stats.b2D7BankerPushes : effectiveAllHands.filter((h) => h.isDragon7 && h.b2Bet?.mainBet === 'BANKER').length;
+  const b2D7PlayerLosses = d7Stats ? d7Stats.b2D7PlayerLosses : effectiveAllHands.filter((h) => h.isDragon7 && h.b2Bet?.mainBet === 'PLAYER').length;
+  const b2D7NoBets = d7Stats ? d7Stats.b2D7NoBets : effectiveAllHands.filter((h) => h.isDragon7 && (!h.b2Bet || h.b2Bet.mainBet === null)).length;
 
-  const cD7BankerPushes = effectiveAllHands.filter((h) => h.isDragon7 && h.cBet?.mainBet === 'BANKER').length;
-  const cD7PlayerLosses = effectiveAllHands.filter((h) => h.isDragon7 && h.cBet?.mainBet === 'PLAYER').length;
-  const cD7NoBets = effectiveAllHands.filter((h) => h.isDragon7 && (!h.cBet || h.cBet.mainBet === null)).length;
+  const cD7BankerPushes = d7Stats ? d7Stats.cD7BankerPushes : effectiveAllHands.filter((h) => h.isDragon7 && h.cBet?.mainBet === 'BANKER').length;
+  const cD7PlayerLosses = d7Stats ? d7Stats.cD7PlayerLosses : effectiveAllHands.filter((h) => h.isDragon7 && h.cBet?.mainBet === 'PLAYER').length;
+  const cD7NoBets = d7Stats ? d7Stats.cD7NoBets : effectiveAllHands.filter((h) => h.isDragon7 && (!h.cBet || h.cBet.mainBet === null)).length;
 
-  const c1D7BankerPushes = effectiveAllHands.filter((h) => h.isDragon7 && h.c1Bet?.mainBet === 'BANKER').length;
-  const c1D7PlayerLosses = effectiveAllHands.filter((h) => h.isDragon7 && h.c1Bet?.mainBet === 'PLAYER').length;
-  const c1D7NoBets = effectiveAllHands.filter((h) => h.isDragon7 && (!h.c1Bet || h.c1Bet.mainBet === null)).length;
+  const c1D7BankerPushes = d7Stats ? d7Stats.c1D7BankerPushes : effectiveAllHands.filter((h) => h.isDragon7 && h.c1Bet?.mainBet === 'BANKER').length;
+  const c1D7PlayerLosses = d7Stats ? d7Stats.c1D7PlayerLosses : effectiveAllHands.filter((h) => h.isDragon7 && h.c1Bet?.mainBet === 'PLAYER').length;
+  const c1D7NoBets = d7Stats ? d7Stats.c1D7NoBets : effectiveAllHands.filter((h) => h.isDragon7 && (!h.c1Bet || h.c1Bet.mainBet === null)).length;
 
-  const c2D7BankerPushes = effectiveAllHands.filter((h) => h.isDragon7 && h.c2Bet?.mainBet === 'BANKER').length;
-  const c2D7PlayerLosses = effectiveAllHands.filter((h) => h.isDragon7 && h.c2Bet?.mainBet === 'PLAYER').length;
-  const c2D7NoBets = effectiveAllHands.filter((h) => h.isDragon7 && (!h.c2Bet || h.c2Bet.mainBet === null)).length;
+  const c2D7BankerPushes = d7Stats ? d7Stats.c2D7BankerPushes : effectiveAllHands.filter((h) => h.isDragon7 && h.c2Bet?.mainBet === 'BANKER').length;
+  const c2D7PlayerLosses = d7Stats ? d7Stats.c2D7PlayerLosses : effectiveAllHands.filter((h) => h.isDragon7 && h.c2Bet?.mainBet === 'PLAYER').length;
+  const c2D7NoBets = d7Stats ? d7Stats.c2D7NoBets : effectiveAllHands.filter((h) => h.isDragon7 && (!h.c2Bet || h.c2Bet.mainBet === null)).length;
 
-  // All-Time Historical Cumulative Trend Points (Normalized Origin = 0 for ALL players at Hand #0)
-  const allTimePoints = [
-    { handNumber: 0, aCum: 0, bCum: 0, b1Cum: 0, b2Cum: 0, cCum: 0, c1Cum: 0, c2Cum: 0 },
-    ...effectiveAllHands.map((h) => ({
-      handNumber: h.handNumber,
-      aCum: h.aBankrollAfter - 1000,
-      bCum: h.bBankrollAfter - 10000,
-      b1Cum: (h.b1BankrollAfter ?? 10000) - 10000,
-      b2Cum: (h.b2BankrollAfter ?? 10000) - 10000,
-      cCum: (h.cBankrollAfter ?? 10000) - 10000,
-      c1Cum: (h.c1BankrollAfter ?? 10000) - 10000,
-      c2Cum: (h.c2BankrollAfter ?? 10000) - 10000,
-    })),
-  ];
+  // All-Time Historical Cumulative Trend Points
+  const allTimePoints: TrendPoint[] = (trendPoints && trendPoints.length > 0)
+    ? trendPoints
+    : [
+        { handNumber: 0, aCum: 0, bCum: 0, b1Cum: 0, b2Cum: 0, cCum: 0, c1Cum: 0, c2Cum: 0 },
+        ...effectiveAllHands.map((h) => ({
+          handNumber: h.handNumber,
+          aCum: h.aBankrollAfter - 1000,
+          bCum: h.bBankrollAfter - 10000,
+          b1Cum: (h.b1BankrollAfter ?? 10000) - 10000,
+          b2Cum: (h.b2BankrollAfter ?? 10000) - 10000,
+          cCum: (h.cBankrollAfter ?? 10000) - 10000,
+          c1Cum: (h.c1BankrollAfter ?? 10000) - 10000,
+          c2Cum: (h.c2BankrollAfter ?? 10000) - 10000,
+        })),
+      ];
 
-  // Calculate All-Time Historical Max Drawdowns across allTimePoints
-  let peakA = 0, histMaxDDA = 0;
-  let peakB = 0, histMaxDDB = 0;
-  let peakB1 = 0, histMaxDDB1 = 0;
-  let peakB2 = 0, histMaxDDB2 = 0;
-  let peakC = 0, histMaxDDC = 0;
-  let peakC1 = 0, histMaxDDC1 = 0;
-  let peakC2 = 0, histMaxDDC2 = 0;
-
-  allTimePoints.forEach((p) => {
-    if (p.aCum > peakA) peakA = p.aCum;
-    const ddA = peakA - p.aCum;
-    if (ddA > histMaxDDA) histMaxDDA = ddA;
-
-    if (p.bCum > peakB) peakB = p.bCum;
-    const ddB = peakB - p.bCum;
-    if (ddB > histMaxDDB) histMaxDDB = ddB;
-
-    if (p.b1Cum > peakB1) peakB1 = p.b1Cum;
-    const ddB1 = peakB1 - p.b1Cum;
-    if (ddB1 > histMaxDDB1) histMaxDDB1 = ddB1;
-
-    if (p.b2Cum > peakB2) peakB2 = p.b2Cum;
-    const ddB2 = peakB2 - p.b2Cum;
-    if (ddB2 > histMaxDDB2) histMaxDDB2 = ddB2;
-
-    if (p.cCum > peakC) peakC = p.cCum;
-    const ddC = peakC - p.cCum;
-    if (ddC > histMaxDDC) histMaxDDC = ddC;
-
-    if (p.c1Cum > peakC1) peakC1 = p.c1Cum;
-    const ddC1 = peakC1 - p.c1Cum;
-    if (ddC1 > histMaxDDC1) histMaxDDC1 = ddC1;
-
-    if (p.c2Cum > peakC2) peakC2 = p.c2Cum;
-    const ddC2 = peakC2 - p.c2Cum;
-    if (ddC2 > histMaxDDC2) histMaxDDC2 = ddC2;
-  });
+  // All-Time Max Drawdowns from stats or fallback
+  const histMaxDDA = stats.aMaxDrawdown ?? 0;
+  const histMaxDDB = stats.bMaxDrawdown ?? 0;
+  const histMaxDDB1 = stats.b1MaxDrawdown ?? 0;
+  const histMaxDDB2 = stats.b2MaxDrawdown ?? 0;
+  const histMaxDDC = stats.cMaxDrawdown ?? 0;
+  const histMaxDDC1 = stats.c1MaxDrawdown ?? 0;
+  const histMaxDDC2 = stats.c2MaxDrawdown ?? 0;
 
   // SVG Chart points
   const svgWidth = 600;
@@ -310,14 +286,26 @@ ${csvStr}
   let zeroY = 65;
 
   if (allTimePoints.length > 1) {
-    const minCum = Math.min(
-      ...allTimePoints.flatMap((d) => [d.aCum, d.bCum, d.b1Cum, d.b2Cum, d.cCum, d.c1Cum, d.c2Cum]),
-      -500
-    );
-    const maxCum = Math.max(
-      ...allTimePoints.flatMap((d) => [d.aCum, d.bCum, d.b1Cum, d.b2Cum, d.cCum, d.c1Cum, d.c2Cum]),
-      500
-    );
+    let minCum = -500;
+    let maxCum = 500;
+
+    for (let i = 0; i < allTimePoints.length; i++) {
+      const p = allTimePoints[i];
+      if (p.aCum < minCum) minCum = p.aCum;
+      if (p.aCum > maxCum) maxCum = p.aCum;
+      if (p.bCum < minCum) minCum = p.bCum;
+      if (p.bCum > maxCum) maxCum = p.bCum;
+      if (p.b1Cum < minCum) minCum = p.b1Cum;
+      if (p.b1Cum > maxCum) maxCum = p.b1Cum;
+      if (p.b2Cum < minCum) minCum = p.b2Cum;
+      if (p.b2Cum > maxCum) maxCum = p.b2Cum;
+      if (p.cCum < minCum) minCum = p.cCum;
+      if (p.cCum > maxCum) maxCum = p.cCum;
+      if (p.c1Cum < minCum) minCum = p.c1Cum;
+      if (p.c1Cum > maxCum) maxCum = p.c1Cum;
+      if (p.c2Cum < minCum) minCum = p.c2Cum;
+      if (p.c2Cum > maxCum) maxCum = p.c2Cum;
+    }
 
     const range = maxCum - minCum || 1;
 
@@ -326,13 +314,21 @@ ${csvStr}
 
     zeroY = getSvgY(0);
 
-    aPath = allTimePoints.map((d, i) => `${i === 0 ? 'M' : 'L'} ${((i / (allTimePoints.length - 1)) * svgWidth).toFixed(1)} ${getSvgY(d.aCum).toFixed(1)}`).join(' ');
-    bPath = allTimePoints.map((d, i) => `${i === 0 ? 'M' : 'L'} ${((i / (allTimePoints.length - 1)) * svgWidth).toFixed(1)} ${getSvgY(d.bCum).toFixed(1)}`).join(' ');
-    b1Path = allTimePoints.map((d, i) => `${i === 0 ? 'M' : 'L'} ${((i / (allTimePoints.length - 1)) * svgWidth).toFixed(1)} ${getSvgY(d.b1Cum).toFixed(1)}`).join(' ');
-    b2Path = allTimePoints.map((d, i) => `${i === 0 ? 'M' : 'L'} ${((i / (allTimePoints.length - 1)) * svgWidth).toFixed(1)} ${getSvgY(d.b2Cum).toFixed(1)}`).join(' ');
-    cPath = allTimePoints.map((d, i) => `${i === 0 ? 'M' : 'L'} ${((i / (allTimePoints.length - 1)) * svgWidth).toFixed(1)} ${getSvgY(d.cCum).toFixed(1)}`).join(' ');
-    c1Path = allTimePoints.map((d, i) => `${i === 0 ? 'M' : 'L'} ${((i / (allTimePoints.length - 1)) * svgWidth).toFixed(1)} ${getSvgY(d.c1Cum).toFixed(1)}`).join(' ');
-    c2Path = allTimePoints.map((d, i) => `${i === 0 ? 'M' : 'L'} ${((i / (allTimePoints.length - 1)) * svgWidth).toFixed(1)} ${getSvgY(d.c2Cum).toFixed(1)}`).join(' ');
+    // Downsample points if dataset is extremely large to keep SVG rendering performant
+    let samplePoints = allTimePoints;
+    if (allTimePoints.length > 500) {
+      const step = Math.ceil(allTimePoints.length / 500);
+      samplePoints = allTimePoints.filter((_, idx) => idx % step === 0 || idx === allTimePoints.length - 1);
+    }
+
+    const totalPts = samplePoints.length - 1 || 1;
+    aPath = samplePoints.map((d, i) => `${i === 0 ? 'M' : 'L'} ${((i / totalPts) * svgWidth).toFixed(1)} ${getSvgY(d.aCum).toFixed(1)}`).join(' ');
+    bPath = samplePoints.map((d, i) => `${i === 0 ? 'M' : 'L'} ${((i / totalPts) * svgWidth).toFixed(1)} ${getSvgY(d.bCum).toFixed(1)}`).join(' ');
+    b1Path = samplePoints.map((d, i) => `${i === 0 ? 'M' : 'L'} ${((i / totalPts) * svgWidth).toFixed(1)} ${getSvgY(d.b1Cum).toFixed(1)}`).join(' ');
+    b2Path = samplePoints.map((d, i) => `${i === 0 ? 'M' : 'L'} ${((i / totalPts) * svgWidth).toFixed(1)} ${getSvgY(d.b2Cum).toFixed(1)}`).join(' ');
+    cPath = samplePoints.map((d, i) => `${i === 0 ? 'M' : 'L'} ${((i / totalPts) * svgWidth).toFixed(1)} ${getSvgY(d.cCum).toFixed(1)}`).join(' ');
+    c1Path = samplePoints.map((d, i) => `${i === 0 ? 'M' : 'L'} ${((i / totalPts) * svgWidth).toFixed(1)} ${getSvgY(d.c1Cum).toFixed(1)}`).join(' ');
+    c2Path = samplePoints.map((d, i) => `${i === 0 ? 'M' : 'L'} ${((i / totalPts) * svgWidth).toFixed(1)} ${getSvgY(d.c2Cum).toFixed(1)}`).join(' ');
   }
 
   const recent10Hands = [...handResults].reverse().slice(0, 10);
