@@ -173,6 +173,7 @@ export interface GameSettings {
   aEnableSideBets: boolean; // Side bets enabled
   sideBetAmount: number; // Default 10
   prngSeed: string; // PRNG seed
+  botTakeProfitResetMode?: 'ISOLATED_SHOE' | 'CUMULATIVE'; // Default ISOLATED_SHOE (当鞋独立重置 vs 跨鞋累计追亏)
 }
 
 export interface PlayerBotState {

@@ -24,6 +24,7 @@ import {
   calculateHandScore,
   createEightDecks,
   dealHand,
+  generateRandomSeed,
   mulberry32,
   shuffleDeck,
   stringToSeed,
@@ -63,6 +64,7 @@ export default function App() {
     aEnableSideBets: true,
     sideBetAmount: 10,
     prngSeed: Date.now().toString(),
+    botTakeProfitResetMode: 'ISOLATED_SHOE',
   });
 
   // Game Engine & Shoe State
@@ -380,7 +382,8 @@ export default function App() {
       setShoeHistory((prev) => [...prev, record]);
     }
 
-    // Reset Bot states for the new shoe
+    // Reset Bot states for the new shoe based on setting
+    const isIsolatedMode = settings.botTakeProfitResetMode !== 'CUMULATIVE'; // default: 当鞋独立认亏，下一鞋重新起算
     const resetBotForNewShoe = (st: PlayerBotState): PlayerBotState => {
       const reachedTarget = st.isTakeProfitStopped;
       return {
@@ -388,8 +391,9 @@ export default function App() {
         isChasing: false,
         aConsecutiveWins: 0,
         isTakeProfitStopped: false,
-        // If reached target in previous shoe, reset profit cycle to 0. Otherwise carry over loss/progress!
-        profitSinceReset: reachedTarget ? 0 : st.profitSinceReset,
+        // 单鞋独立模式：每靴无论输赢，profitSinceReset 均清零重新起算
+        // 跨鞋累计模式：若上鞋已止盈则清零，未止盈则累计亏损
+        profitSinceReset: isIsolatedMode ? 0 : (reachedTarget ? 0 : st.profitSinceReset),
       };
     };
 
@@ -408,7 +412,7 @@ export default function App() {
     setC1State(resetBotForNewShoe);
     setC2State(resetBotForNewShoe);
 
-    const newSeed = Date.now().toString();
+    const newSeed = generateRandomSeed();
     setSettings((prev) => ({ ...prev, prngSeed: newSeed }));
     initializeShoe(newSeed);
     setHandResults([]); // Clear road map for the new shoe

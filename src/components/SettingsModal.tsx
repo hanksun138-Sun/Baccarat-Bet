@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { GameSettings } from '../types';
+import { generateRandomSeed } from '../utils/baccarat';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -29,12 +30,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [c2ChaseBet, setC2ChaseBet] = useState<number>(settings.c2ChaseBet ?? 200);
   const [aDefaultBet, setADefaultBet] = useState<number>(settings.aDefaultBet);
   const [aEnableSideBets, setAEnableSideBets] = useState<boolean>(settings.aEnableSideBets);
+  const [botTakeProfitResetMode, setBotTakeProfitResetMode] = useState<'ISOLATED_SHOE' | 'CUMULATIVE'>(
+    settings.botTakeProfitResetMode || 'ISOLATED_SHOE'
+  );
   const [prngSeed, setPrngSeed] = useState<string>(settings.prngSeed);
 
   if (!isOpen) return null;
 
   const handleRandomizeSeed = () => {
-    setPrngSeed(Date.now().toString());
+    setPrngSeed(generateRandomSeed());
   };
 
   const handleSave = () => {
@@ -55,7 +59,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       aDefaultBet: Math.max(1, aDefaultBet),
       aEnableSideBets,
       sideBetAmount: 10,
-      prngSeed: prngSeed || Date.now().toString(),
+      prngSeed: prngSeed || generateRandomSeed(),
+      botTakeProfitResetMode,
     });
     onClose();
   };
@@ -247,6 +252,55 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               onChange={(e) => setAEnableSideBets(e.target.checked)}
               className="w-5 h-5 accent-[#d4af37] rounded cursor-pointer"
             />
+          </div>
+
+          {/* Bot Take-Profit Reset Mode (B-1, B-2, C-1, C-2 止盈/换鞋跨靴机制) */}
+          <div className="p-3 rounded-lg bg-black/60 border border-[#b8860b]/40 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-amber-200 text-sm">
+                🎯 B-1/B-2/C-1/C-2 换鞋止盈重置模式:
+              </span>
+              <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-[#d4af37] border border-[#b8860b]/40">
+                资金管理
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setBotTakeProfitResetMode('ISOLATED_SHOE')}
+                className={`p-2.5 rounded-lg border text-left transition-all ${
+                  botTakeProfitResetMode === 'ISOLATED_SHOE'
+                    ? 'bg-[#d4af37]/20 border-[#d4af37] text-white ring-1 ring-[#d4af37]'
+                    : 'bg-black/60 border-[#b8860b]/30 text-amber-200/70 hover:bg-black/80'
+                }`}
+              >
+                <div className="font-bold text-xs flex items-center gap-1.5 text-amber-300">
+                  <span className={botTakeProfitResetMode === 'ISOLATED_SHOE' ? 'text-green-400' : 'text-zinc-500'}>●</span>
+                  单鞋独立重置 (推荐)
+                </div>
+                <div className="text-[11px] text-amber-200/60 mt-1 leading-tight">
+                  当鞋亏损直接认亏，下一鞋基码重新起算，避免极端连续追亏。
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setBotTakeProfitResetMode('CUMULATIVE')}
+                className={`p-2.5 rounded-lg border text-left transition-all ${
+                  botTakeProfitResetMode === 'CUMULATIVE'
+                    ? 'bg-[#d4af37]/20 border-[#d4af37] text-white ring-1 ring-[#d4af37]'
+                    : 'bg-black/60 border-[#b8860b]/30 text-amber-200/70 hover:bg-black/80'
+                }`}
+              >
+                <div className="font-bold text-xs flex items-center gap-1.5 text-amber-300">
+                  <span className={botTakeProfitResetMode === 'CUMULATIVE' ? 'text-amber-400' : 'text-zinc-500'}>●</span>
+                  跨鞋累计追亏 (激进)
+                </div>
+                <div className="text-[11px] text-amber-200/60 mt-1 leading-tight">
+                  上一鞋未止盈的亏损累计到下一鞋继续追回，直到打回止盈线。
+                </div>
+              </button>
+            </div>
           </div>
 
           {/* PRNG Seed */}

@@ -10,14 +10,24 @@ export function mulberry32(a: number) {
   };
 }
 
-export function stringToSeed(str: string): number {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = (hash << 5) - hash + char;
-    hash |= 0;
+// Generate high-entropy seed combining hardware crypto entropy and high-res timestamp
+export function generateRandomSeed(): string {
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    const arr = new Uint32Array(2);
+    crypto.getRandomValues(arr);
+    return `${Date.now()}_${arr[0].toString(16)}${arr[1].toString(16)}`;
   }
-  return hash >>> 0;
+  return `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+}
+
+// High quality FNV-1a 32-bit seed hasher
+export function stringToSeed(str: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return h >>> 0;
 }
 
 // Baccarat point card value
