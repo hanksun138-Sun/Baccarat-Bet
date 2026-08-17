@@ -8,7 +8,7 @@ interface BotCardData {
   exitRuleText: string;
   maxConsecutiveWins: number;
   takeProfitUnits: number; // 0 means no limit, 2, 3 or 4
-  stopLossUnits?: number; // 6 units for B-3
+  stopLossUnits?: number; // 5 units for B-3
   bankroll: number;
   state: PlayerBotState;
   currentBet: PlayerBBet;
@@ -148,8 +148,8 @@ export const PlayerBStatus: React.FC<PlayerBStatusProps> = ({
       name: '玩家B-3',
       exitRuleText: 'A连赢3手退出',
       maxConsecutiveWins: 3,
-      takeProfitUnits: 4,
-      stopLossUnits: 6,
+      takeProfitUnits: 3,
+      stopLossUnits: 5,
       bankroll: b3Bankroll,
       state: b3State || defaultBotState,
       currentBet: b3CurrentBet,
