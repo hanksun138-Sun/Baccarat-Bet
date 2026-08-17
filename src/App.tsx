@@ -54,6 +54,8 @@ export default function App() {
     b1PostExhaustionChaseBet: 200,
     b2ChaseBet: 200,
     b2PostExhaustionChaseBet: 200,
+    b3ChaseBet: 200,
+    b3PostExhaustionChaseBet: 200,
     cChaseBet: 200,
     cPostExhaustionChaseBet: 200,
     c1ChaseBet: 200,
@@ -84,6 +86,7 @@ export default function App() {
   const [bBankroll, setBBankroll] = useState<number>(10000);
   const [b1Bankroll, setB1Bankroll] = useState<number>(10000);
   const [b2Bankroll, setB2Bankroll] = useState<number>(10000);
+  const [b3Bankroll, setB3Bankroll] = useState<number>(10000);
   const [cBankroll, setCBankroll] = useState<number>(10000);
   const [c1Bankroll, setC1Bankroll] = useState<number>(10000);
   const [c2Bankroll, setC2Bankroll] = useState<number>(10000);
@@ -104,6 +107,7 @@ export default function App() {
   });
   const [b1State, setB1State] = useState<PlayerBotState>(defaultBotState);
   const [b2State, setB2State] = useState<PlayerBotState>(defaultBotState);
+  const [b3State, setB3State] = useState<PlayerBotState>(defaultBotState);
 
   const [cState, setCState] = useState<PlayerCState>({
     ...defaultBotState,
@@ -119,7 +123,7 @@ export default function App() {
   const [shoeHistory, setShoeHistory] = useState<ShoeRecord[]>([]);
   const [d7Stats, setD7Stats] = useState<D7Stats>(initialD7Stats);
   const [trendPoints, setTrendPoints] = useState<TrendPoint[]>([
-    { handNumber: 0, aCum: 0, bCum: 0, b1Cum: 0, b2Cum: 0, cCum: 0, c1Cum: 0, c2Cum: 0 },
+    { handNumber: 0, aCum: 0, bCum: 0, b1Cum: 0, b2Cum: 0, b3Cum: 0, cCum: 0, c1Cum: 0, c2Cum: 0 },
   ]);
   const [stats, setStats] = useState<GameStats>({
     aTotalHandsBet: 0,
@@ -140,6 +144,8 @@ export default function App() {
     b1MaxDrawdown: 0,
     b2MaxBankroll: 10000,
     b2MaxDrawdown: 0,
+    b3MaxBankroll: 10000,
+    b3MaxDrawdown: 0,
     cMaxBankroll: 10000,
     cMaxDrawdown: 0,
     c1MaxBankroll: 10000,
@@ -162,6 +168,7 @@ export default function App() {
         if (parsed.bBankroll !== undefined) setBBankroll(parsed.bBankroll);
         if (parsed.b1Bankroll !== undefined) setB1Bankroll(parsed.b1Bankroll);
         if (parsed.b2Bankroll !== undefined) setB2Bankroll(parsed.b2Bankroll);
+        if (parsed.b3Bankroll !== undefined) setB3Bankroll(parsed.b3Bankroll);
         if (parsed.cBankroll !== undefined) setCBankroll(parsed.cBankroll);
         if (parsed.c1Bankroll !== undefined) setC1Bankroll(parsed.c1Bankroll);
         if (parsed.c2Bankroll !== undefined) setC2Bankroll(parsed.c2Bankroll);
@@ -169,23 +176,159 @@ export default function App() {
         if (parsed.bState) setBState(parsed.bState);
         if (parsed.b1State) setB1State(parsed.b1State);
         if (parsed.b2State) setB2State(parsed.b2State);
+        if (parsed.b3State) setB3State(parsed.b3State);
         if (parsed.cState) setCState(parsed.cState);
         if (parsed.c1State) setC1State(parsed.c1State);
         if (parsed.c2State) setC2State(parsed.c2State);
 
-        if (parsed.stats) setStats(parsed.stats);
-        if (parsed.settings) setSettings(parsed.settings);
+        if (parsed.stats) {
+          setStats({
+            ...parsed.stats,
+            b3MaxBankroll: parsed.stats.b3MaxBankroll ?? 10000,
+            b3MaxDrawdown: parsed.stats.b3MaxDrawdown ?? 0,
+          });
+        }
+        if (parsed.settings) setSettings((prev) => ({ ...prev, ...parsed.settings }));
         if (parsed.handResults) setHandResults(parsed.handResults);
         
-        const handsForInit: HandResult[] = parsed.allHandResults || parsed.handResults || [];
+        let handsForInit: HandResult[] = parsed.allHandResults || parsed.handResults || [];
+        let loadedShoes: ShoeRecord[] = parsed.shoeHistory || [];
+
+        // Check if B-3 needs historical backfill/reconstruction from previous version data
+        if (parsed.b3Bankroll === undefined || loadedShoes.some((s) => s.b3Profit === undefined)) {
+          let runningB3Bankroll = 10000;
+          let runningB3Max = 10000;
+          let runningB3DD = 0;
+          let runningB3State: PlayerBotState = { ...defaultBotState };
+
+          // Backfill shoeHistory for B-3 (clamp each shoe profit by +4 units [+800] and -8 units [-1600])
+          loadedShoes = loadedShoes.map((s) => {
+            if (s.b3Profit !== undefined && s.b3BankrollEnd !== undefined) {
+              runningB3Bankroll = s.b3BankrollEnd;
+              return s;
+            }
+            // Derive B-3 profit from shoe's B profit clamped to +4 units (+800) and -8 units (-1600)
+            const b3ShoeNet = Math.min(800, Math.max(-1600, s.bProfit));
+            runningB3Bankroll = Math.max(0, runningB3Bankroll + b3ShoeNet);
+            runningB3Max = Math.max(runningB3Max, runningB3Bankroll);
+            runningB3DD = Math.max(runningB3DD, runningB3Max - runningB3Bankroll);
+            return {
+              ...s,
+              b3Profit: b3ShoeNet,
+              b3BankrollEnd: runningB3Bankroll,
+            };
+          });
+
+          // Also backfill hands in current active shoe if needed
+          if (parsed.handResults && parsed.handResults.length > 0) {
+            let currentShoeB3Profit = 0;
+            let currentShoeStopped = false;
+            let currentShoeChasing = false;
+            let currentConsecWins = 0;
+            let currentB3Wins = 0;
+            let currentB3Losses = 0;
+
+            const backfilledCurrentHands = parsed.handResults.map((h: HandResult) => {
+              if (h.b3NetProfit !== undefined) return h;
+              let bet: PlayerBBet = { mainBet: null, mainAmount: 0 };
+              if (currentShoeChasing && !currentShoeStopped && h.aBet.mainBet !== null) {
+                bet = {
+                  mainBet: h.aBet.mainBet === 'PLAYER' ? 'BANKER' : 'PLAYER',
+                  mainAmount: 200,
+                };
+              }
+              let netProfit = 0;
+              let mainResult: 'WIN' | 'LOSS' | 'PUSH' | 'NO_BET' = 'NO_BET';
+              if (bet.mainBet !== null && bet.mainAmount > 0) {
+                if (h.winner === 'TIE') {
+                  netProfit = 0;
+                  mainResult = 'PUSH';
+                } else if (bet.mainBet === h.winner) {
+                  netProfit = bet.mainAmount;
+                  mainResult = 'WIN';
+                  currentB3Wins++;
+                } else {
+                  netProfit = -bet.mainAmount;
+                  mainResult = 'LOSS';
+                  currentB3Losses++;
+                }
+              }
+              currentShoeB3Profit += netProfit;
+              runningB3Bankroll = Math.max(0, runningB3Bankroll + netProfit);
+
+              if (!currentShoeStopped) {
+                if (currentShoeB3Profit >= 800 || currentShoeB3Profit <= -1600) {
+                  currentShoeStopped = true;
+                }
+              }
+
+              if (currentShoeStopped) {
+                currentShoeChasing = false;
+                currentConsecWins = 0;
+              } else if (!currentShoeChasing) {
+                if (h.aMainResult === 'LOSS') {
+                  currentShoeChasing = true;
+                  currentConsecWins = 0;
+                }
+              } else {
+                if (h.aMainResult === 'WIN') {
+                  currentConsecWins++;
+                  if (currentConsecWins >= 3) {
+                    currentShoeChasing = false;
+                    currentConsecWins = 0;
+                  }
+                } else if (h.aMainResult === 'LOSS') {
+                  currentConsecWins = 0;
+                }
+              }
+
+              return {
+                ...h,
+                b3Bet: bet,
+                b3WasChasing: currentShoeChasing,
+                b3MainResult: mainResult,
+                b3NetProfit: netProfit,
+                b3BankrollAfter: runningB3Bankroll,
+                b3TakeProfitStoppedAfter: currentShoeStopped,
+              };
+            });
+            setHandResults(backfilledCurrentHands);
+            handsForInit = backfilledCurrentHands;
+
+            runningB3State = {
+              isChasing: currentShoeChasing,
+              aConsecutiveWins: currentConsecWins,
+              totalChasesTriggered: 0,
+              totalChaseHands: currentB3Wins + currentB3Losses,
+              chaseWins: currentB3Wins,
+              chaseLosses: currentB3Losses,
+              profitSinceReset: currentShoeB3Profit,
+              isTakeProfitStopped: currentShoeStopped,
+            };
+          }
+
+          setB3Bankroll(runningB3Bankroll);
+          setB3State(runningB3State);
+          setStats((prev) => ({
+            ...prev,
+            b3MaxBankroll: runningB3Max,
+            b3MaxDrawdown: runningB3DD,
+          }));
+        }
+
         if (parsed.allHandResults) setAllHandResults(parsed.allHandResults);
         else if (parsed.handResults) setAllHandResults(parsed.handResults);
         
-        if (parsed.shoeHistory) setShoeHistory(parsed.shoeHistory);
+        setShoeHistory(loadedShoes);
         if (parsed.totalHandCount) setTotalHandCount(parsed.totalHandCount);
 
         if (parsed.d7Stats) {
-          setD7Stats(parsed.d7Stats);
+          setD7Stats({
+            ...parsed.d7Stats,
+            b3D7BankerPushes: parsed.d7Stats.b3D7BankerPushes ?? 0,
+            b3D7PlayerLosses: parsed.d7Stats.b3D7PlayerLosses ?? 0,
+            b3D7NoBets: parsed.d7Stats.b3D7NoBets ?? 0,
+          });
         } else if (handsForInit.length > 0) {
           const reconstructedD7: D7Stats = { ...initialD7Stats };
           handsForInit.forEach((h) => {
@@ -208,6 +351,10 @@ export default function App() {
               if (h.b2Bet?.mainBet === 'PLAYER') reconstructedD7.b2D7PlayerLosses++;
               if (!h.b2Bet || h.b2Bet.mainBet === null) reconstructedD7.b2D7NoBets++;
 
+              if (h.b3Bet?.mainBet === 'BANKER') reconstructedD7.b3D7BankerPushes = (reconstructedD7.b3D7BankerPushes ?? 0) + 1;
+              if (h.b3Bet?.mainBet === 'PLAYER') reconstructedD7.b3D7PlayerLosses = (reconstructedD7.b3D7PlayerLosses ?? 0) + 1;
+              if (!h.b3Bet || h.b3Bet.mainBet === null) reconstructedD7.b3D7NoBets = (reconstructedD7.b3D7NoBets ?? 0) + 1;
+
               if (h.cBet?.mainBet === 'BANKER') reconstructedD7.cD7BankerPushes++;
               if (h.cBet?.mainBet === 'PLAYER') reconstructedD7.cD7PlayerLosses++;
               if (!h.cBet || h.cBet.mainBet === null) reconstructedD7.cD7NoBets++;
@@ -225,16 +372,20 @@ export default function App() {
         }
 
         if (parsed.trendPoints) {
-          setTrendPoints(parsed.trendPoints);
+          setTrendPoints(parsed.trendPoints.map((pt: any) => ({
+            ...pt,
+            b3Cum: pt.b3Cum ?? pt.bCum ?? 0,
+          })));
         } else if (handsForInit.length > 0) {
           const reconstructedPts: TrendPoint[] = [
-            { handNumber: 0, aCum: 0, bCum: 0, b1Cum: 0, b2Cum: 0, cCum: 0, c1Cum: 0, c2Cum: 0 },
+            { handNumber: 0, aCum: 0, bCum: 0, b1Cum: 0, b2Cum: 0, b3Cum: 0, cCum: 0, c1Cum: 0, c2Cum: 0 },
             ...handsForInit.map((h) => ({
               handNumber: h.handNumber,
               aCum: h.aBankrollAfter - 1000,
               bCum: h.bBankrollAfter - 10000,
               b1Cum: (h.b1BankrollAfter ?? 10000) - 10000,
               b2Cum: (h.b2BankrollAfter ?? 10000) - 10000,
+              b3Cum: (h.b3BankrollAfter ?? 10000) - 10000,
               cCum: (h.cBankrollAfter ?? 10000) - 10000,
               c1Cum: (h.c1BankrollAfter ?? 10000) - 10000,
               c2Cum: (h.c2BankrollAfter ?? 10000) - 10000,
@@ -258,12 +409,14 @@ export default function App() {
           bBankroll,
           b1Bankroll,
           b2Bankroll,
+          b3Bankroll,
           cBankroll,
           c1Bankroll,
           c2Bankroll,
           bState,
           b1State,
           b2State,
+          b3State,
           cState,
           c1State,
           c2State,
@@ -291,12 +444,14 @@ export default function App() {
     bBankroll,
     b1Bankroll,
     b2Bankroll,
+    b3Bankroll,
     cBankroll,
     c1Bankroll,
     c2Bankroll,
     bState,
     b1State,
     b2State,
+    b3State,
     cState,
     c1State,
     c2State,
@@ -343,6 +498,7 @@ export default function App() {
       const bProfit = handResults.reduce((sum, h) => sum + h.bNetProfit, 0);
       const b1Profit = handResults.reduce((sum, h) => sum + (h.b1NetProfit ?? 0), 0);
       const b2Profit = handResults.reduce((sum, h) => sum + (h.b2NetProfit ?? 0), 0);
+      const b3Profit = handResults.reduce((sum, h) => sum + (h.b3NetProfit ?? 0), 0);
       const cProfit = handResults.reduce((sum, h) => sum + (h.cNetProfit ?? 0), 0);
       const c1Profit = handResults.reduce((sum, h) => sum + (h.c1NetProfit ?? 0), 0);
       const c2Profit = handResults.reduce((sum, h) => sum + (h.c2NetProfit ?? 0), 0);
@@ -361,6 +517,7 @@ export default function App() {
         bProfit,
         b1Profit,
         b2Profit,
+        b3Profit,
         cProfit,
         c1Profit,
         c2Profit,
@@ -373,6 +530,7 @@ export default function App() {
         bBankrollEnd: bBankroll,
         b1BankrollEnd: b1Bankroll,
         b2BankrollEnd: b2Bankroll,
+        b3BankrollEnd: b3Bankroll,
         cBankrollEnd: cBankroll,
         c1BankrollEnd: c1Bankroll,
         c2BankrollEnd: c2Bankroll,
@@ -404,6 +562,7 @@ export default function App() {
     }));
     setB1State(resetBotForNewShoe);
     setB2State(resetBotForNewShoe);
+    setB3State(resetBotForNewShoe);
     setCState((prev) => ({
       ...resetBotForNewShoe(prev),
       chaseWinsC: prev.chaseWinsC,
@@ -420,12 +579,13 @@ export default function App() {
 
   // Handle Global Session Reset
   const handleResetSession = () => {
-    if (window.confirm('确认要一键恢复所有金额、对局记录和数据统计分析为初始状态吗？这将重置所有6位对家资金、追打状态和所有历史对局记录。')) {
+    if (window.confirm('确认要一键恢复所有金额、对局记录和数据统计分析为初始状态吗？这将重置所有7位对家资金、追打状态和所有历史对局记录。')) {
       localStorage.removeItem(LOCAL_STORAGE_KEY);
       setABankroll(1000);
       setBBankroll(10000);
       setB1Bankroll(10000);
       setB2Bankroll(10000);
+      setB3Bankroll(10000);
       setCBankroll(10000);
       setC1Bankroll(10000);
       setC2Bankroll(10000);
@@ -451,6 +611,7 @@ export default function App() {
       setBState({ ...freshBotState, chaseWinsB: 0, chaseLossesB: 0 });
       setB1State(freshBotState);
       setB2State(freshBotState);
+      setB3State(freshBotState);
       setCState({ ...freshBotState, chaseWinsC: 0, chaseLossesC: 0 });
       setC1State(freshBotState);
       setC2State(freshBotState);
@@ -474,6 +635,8 @@ export default function App() {
         b1MaxDrawdown: 0,
         b2MaxBankroll: 10000,
         b2MaxDrawdown: 0,
+        b3MaxBankroll: 10000,
+        b3MaxDrawdown: 0,
         cMaxBankroll: 10000,
         cMaxDrawdown: 0,
         c1MaxBankroll: 10000,
@@ -484,7 +647,7 @@ export default function App() {
 
       setD7Stats(initialD7Stats);
       setTrendPoints([
-        { handNumber: 0, aCum: 0, bCum: 0, b1Cum: 0, b2Cum: 0, cCum: 0, c1Cum: 0, c2Cum: 0 },
+        { handNumber: 0, aCum: 0, bCum: 0, b1Cum: 0, b2Cum: 0, b3Cum: 0, cCum: 0, c1Cum: 0, c2Cum: 0 },
       ]);
       setHandResults([]);
       setAllHandResults([]);
@@ -518,6 +681,7 @@ export default function App() {
     chaseBetAmount,
     maxWinsToExit,
     takeProfitUnits,
+    stopLossUnits,
     aMainResult,
     aBetMainBet,
     winner,
@@ -527,6 +691,7 @@ export default function App() {
     chaseBetAmount: number;
     maxWinsToExit: number;
     takeProfitUnits: number;
+    stopLossUnits?: number;
     aMainResult: 'WIN' | 'LOSS' | 'PUSH' | 'NO_BET';
     aBetMainBet: 'PLAYER' | 'BANKER' | null;
     winner: 'PLAYER' | 'BANKER' | 'TIE';
@@ -576,6 +741,13 @@ export default function App() {
     if (takeProfitUnits > 0 && !isTakeProfitStopped) {
       const targetProfit = takeProfitUnits * chaseBetAmount;
       if (profitSinceReset >= targetProfit) {
+        isTakeProfitStopped = true;
+      }
+    }
+
+    if (stopLossUnits && stopLossUnits > 0 && !isTakeProfitStopped) {
+      const stopLossLimit = stopLossUnits * chaseBetAmount;
+      if (profitSinceReset <= -stopLossLimit) {
         isTakeProfitStopped = true;
       }
     }
@@ -742,7 +914,21 @@ export default function App() {
       winner,
     });
 
-    // 5. Process Bot C (2 wins exit, no take profit)
+    // 5. Process Bot B-3 (3 wins exit, +4 units take profit, -8 units stop loss)
+    const b3ChaseBetAmt = aIsExhausted ? (settings.b3PostExhaustionChaseBet ?? 200) : (settings.b3ChaseBet ?? 200);
+    const b3Res = processBotHand({
+      currentState: b3State,
+      currentBankroll: b3Bankroll,
+      chaseBetAmount: b3ChaseBetAmt,
+      maxWinsToExit: 3,
+      takeProfitUnits: 4,
+      stopLossUnits: 8,
+      aMainResult,
+      aBetMainBet: aBet.mainBet,
+      winner,
+    });
+
+    // 6. Process Bot C (2 wins exit, no take profit)
     const cChaseBetAmt = aIsExhausted ? (settings.cPostExhaustionChaseBet ?? 200) : (settings.cChaseBet ?? 200);
     const cRes = processBotHand({
       currentState: cState,
@@ -835,6 +1021,13 @@ export default function App() {
       b2BankrollAfter: b2Res.bankrollAfter,
       b2TakeProfitStoppedAfter: b2Res.takeProfitStoppedAfter,
 
+      b3Bet: b3Res.bet,
+      b3WasChasing: b3State.isChasing,
+      b3MainResult: b3Res.mainResult,
+      b3NetProfit: b3Res.netProfit,
+      b3BankrollAfter: b3Res.bankrollAfter,
+      b3TakeProfitStoppedAfter: b3Res.takeProfitStoppedAfter,
+
       cBet: cRes.bet,
       cWasChasing: cState.isChasing,
       cMainResult: cRes.mainResult,
@@ -871,6 +1064,7 @@ export default function App() {
     setBBankroll(bRes.bankrollAfter);
     setB1Bankroll(b1Res.bankrollAfter);
     setB2Bankroll(b2Res.bankrollAfter);
+    setB3Bankroll(b3Res.bankrollAfter);
     setCBankroll(cRes.bankrollAfter);
     setC1Bankroll(c1Res.bankrollAfter);
     setC2Bankroll(c2Res.bankrollAfter);
@@ -889,6 +1083,7 @@ export default function App() {
     });
     setB1State(b1Res.nextState);
     setB2State(b2Res.nextState);
+    setB3State(b3Res.nextState);
 
     setCState({
       ...cRes.nextState,
@@ -927,6 +1122,10 @@ export default function App() {
         b2D7PlayerLosses: prev.b2D7PlayerLosses + (handRes.b2Bet?.mainBet === 'PLAYER' ? 1 : 0),
         b2D7NoBets: prev.b2D7NoBets + (!handRes.b2Bet || handRes.b2Bet.mainBet === null ? 1 : 0),
 
+        b3D7BankerPushes: (prev.b3D7BankerPushes ?? 0) + (handRes.b3Bet?.mainBet === 'BANKER' ? 1 : 0),
+        b3D7PlayerLosses: (prev.b3D7PlayerLosses ?? 0) + (handRes.b3Bet?.mainBet === 'PLAYER' ? 1 : 0),
+        b3D7NoBets: (prev.b3D7NoBets ?? 0) + (!handRes.b3Bet || handRes.b3Bet.mainBet === null ? 1 : 0),
+
         cD7BankerPushes: prev.cD7BankerPushes + (handRes.cBet?.mainBet === 'BANKER' ? 1 : 0),
         cD7PlayerLosses: prev.cD7PlayerLosses + (handRes.cBet?.mainBet === 'PLAYER' ? 1 : 0),
         cD7NoBets: prev.cD7NoBets + (!handRes.cBet || handRes.cBet.mainBet === null ? 1 : 0),
@@ -948,6 +1147,7 @@ export default function App() {
       bCum: bRes.bankrollAfter - 10000,
       b1Cum: (b1Res.bankrollAfter ?? 10000) - 10000,
       b2Cum: (b2Res.bankrollAfter ?? 10000) - 10000,
+      b3Cum: (b3Res.bankrollAfter ?? 10000) - 10000,
       cCum: (cRes.bankrollAfter ?? 10000) - 10000,
       c1Cum: (c1Res.bankrollAfter ?? 10000) - 10000,
       c2Cum: (c2Res.bankrollAfter ?? 10000) - 10000,
@@ -1000,6 +1200,9 @@ export default function App() {
       const b2MaxBankroll = Math.max(prev.b2MaxBankroll ?? 10000, b2Res.bankrollAfter);
       const b2MaxDrawdown = Math.max(prev.b2MaxDrawdown ?? 0, b2MaxBankroll - b2Res.bankrollAfter);
 
+      const b3MaxBankroll = Math.max(prev.b3MaxBankroll ?? 10000, b3Res.bankrollAfter);
+      const b3MaxDrawdown = Math.max(prev.b3MaxDrawdown ?? 0, b3MaxBankroll - b3Res.bankrollAfter);
+
       const cMaxBankroll = Math.max(prev.cMaxBankroll, cRes.bankrollAfter);
       const cMaxDrawdown = Math.max(prev.cMaxDrawdown, cMaxBankroll - cRes.bankrollAfter);
 
@@ -1028,6 +1231,8 @@ export default function App() {
         b1MaxDrawdown,
         b2MaxBankroll,
         b2MaxDrawdown,
+        b3MaxBankroll,
+        b3MaxDrawdown,
         cMaxBankroll,
         cMaxDrawdown,
         c1MaxBankroll,
@@ -1045,17 +1250,19 @@ export default function App() {
     else if (player === 'B') setBBankroll((prev) => prev + amount);
     else if (player === 'B-1') setB1Bankroll((prev) => prev + amount);
     else if (player === 'B-2') setB2Bankroll((prev) => prev + amount);
+    else if (player === 'B-3') setB3Bankroll((prev) => prev + amount);
     else if (player === 'C') setCBankroll((prev) => prev + amount);
     else if (player === 'C-1') setC1Bankroll((prev) => prev + amount);
     else if (player === 'C-2') setC2Bankroll((prev) => prev + amount);
   };
 
-  const handleChangeBotBetAmount = (player: 'B' | 'B1' | 'B2' | 'C' | 'C1' | 'C2', amt: number) => {
+  const handleChangeBotBetAmount = (player: 'B' | 'B1' | 'B2' | 'B3' | 'C' | 'C1' | 'C2', amt: number) => {
     setSettings((prev) => {
       switch (player) {
         case 'B': return { ...prev, bChaseBet: amt };
         case 'B1': return { ...prev, b1ChaseBet: amt };
         case 'B2': return { ...prev, b2ChaseBet: amt };
+        case 'B3': return { ...prev, b3ChaseBet: amt };
         case 'C': return { ...prev, cChaseBet: amt };
         case 'C1': return { ...prev, c1ChaseBet: amt };
         case 'C2': return { ...prev, c2ChaseBet: amt };
@@ -1141,7 +1348,7 @@ export default function App() {
             </div>
           </div>
 
-          {/* Player B, B-1, B-2, C, C-1, C-2 Status Panel */}
+          {/* Player B, B-1, B-2, B-3, C, C-1, C-2 Status Panel */}
           <PlayerBStatus
             bBankroll={bBankroll}
             bState={bState}
@@ -1157,6 +1364,11 @@ export default function App() {
             b2State={b2State}
             b2CurrentBet={getBotBet(b2State, aBankroll === 0 ? (settings.b2PostExhaustionChaseBet ?? 200) : (settings.b2ChaseBet ?? 200), aBet.mainBet)}
             b2ChaseBetAmount={aBankroll === 0 ? (settings.b2PostExhaustionChaseBet ?? 200) : (settings.b2ChaseBet ?? 200)}
+
+            b3Bankroll={b3Bankroll}
+            b3State={b3State}
+            b3CurrentBet={getBotBet(b3State, aBankroll === 0 ? (settings.b3PostExhaustionChaseBet ?? 200) : (settings.b3ChaseBet ?? 200), aBet.mainBet)}
+            b3ChaseBetAmount={aBankroll === 0 ? (settings.b3PostExhaustionChaseBet ?? 200) : (settings.b3ChaseBet ?? 200)}
 
             cBankroll={cBankroll}
             cState={cState}
@@ -1186,6 +1398,7 @@ export default function App() {
             bState={bState}
             b1State={b1State}
             b2State={b2State}
+            b3State={b3State}
             cState={cState}
             c1State={c1State}
             c2State={c2State}
@@ -1196,6 +1409,7 @@ export default function App() {
             bBankroll={bBankroll}
             b1Bankroll={b1Bankroll}
             b2Bankroll={b2Bankroll}
+            b3Bankroll={b3Bankroll}
             cBankroll={cBankroll}
             c1Bankroll={c1Bankroll}
             c2Bankroll={c2Bankroll}

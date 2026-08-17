@@ -3,11 +3,12 @@ import { PlayerBBet, PlayerBotState } from '../types';
 import { RechargePlayer } from './RechargeModal';
 
 interface BotCardData {
-  id: 'B' | 'B-1' | 'B-2' | 'C' | 'C-1' | 'C-2';
+  id: 'B' | 'B-1' | 'B-2' | 'B-3' | 'C' | 'C-1' | 'C-2';
   name: string;
   exitRuleText: string;
   maxConsecutiveWins: number;
-  takeProfitUnits: number; // 0 means no limit, 2 or 3
+  takeProfitUnits: number; // 0 means no limit, 2, 3 or 4
+  stopLossUnits?: number; // 8 units for B-3
   bankroll: number;
   state: PlayerBotState;
   currentBet: PlayerBBet;
@@ -30,6 +31,11 @@ interface PlayerBStatusProps {
   b2CurrentBet?: PlayerBBet;
   b2ChaseBetAmount?: number;
 
+  b3Bankroll?: number;
+  b3State?: PlayerBotState;
+  b3CurrentBet?: PlayerBBet;
+  b3ChaseBetAmount?: number;
+
   cBankroll?: number;
   cState?: PlayerBotState;
   cCurrentBet?: PlayerBBet;
@@ -47,7 +53,7 @@ interface PlayerBStatusProps {
 
   aIsExhausted: boolean;
   onOpenRecharge: (player: RechargePlayer) => void;
-  onChangeBetAmount: (player: 'B' | 'B1' | 'B2' | 'C' | 'C1' | 'C2', amt: number) => void;
+  onChangeBetAmount: (player: 'B' | 'B1' | 'B2' | 'B3' | 'C' | 'C1' | 'C2', amt: number) => void;
 }
 
 export const PlayerBStatus: React.FC<PlayerBStatusProps> = ({
@@ -65,6 +71,11 @@ export const PlayerBStatus: React.FC<PlayerBStatusProps> = ({
   b2State,
   b2CurrentBet = { mainBet: null, mainAmount: 0 },
   b2ChaseBetAmount = 200,
+
+  b3Bankroll = 10000,
+  b3State,
+  b3CurrentBet = { mainBet: null, mainAmount: 0 },
+  b3ChaseBetAmount = 200,
 
   cBankroll = 10000,
   cState,
@@ -133,6 +144,18 @@ export const PlayerBStatus: React.FC<PlayerBStatusProps> = ({
       chaseBetAmount: b2ChaseBetAmount,
     },
     {
+      id: 'B-3',
+      name: '玩家B-3',
+      exitRuleText: 'A连赢3手退出',
+      maxConsecutiveWins: 3,
+      takeProfitUnits: 4,
+      stopLossUnits: 8,
+      bankroll: b3Bankroll,
+      state: b3State || defaultBotState,
+      currentBet: b3CurrentBet,
+      chaseBetAmount: b3ChaseBetAmount,
+    },
+    {
       id: 'C',
       name: '玩家C',
       exitRuleText: 'A连赢2手退出',
@@ -178,7 +201,7 @@ export const PlayerBStatus: React.FC<PlayerBStatusProps> = ({
       {/* Category Filter Selector */}
       <div className="flex items-center justify-between bg-[#051a0b]/90 border border-[#b8860b]/40 rounded-xl p-2 px-3 shadow-lg font-sans">
         <div className="flex items-center space-x-2">
-          <span className="text-sm font-bold text-[#d4af37]">🤖 追打对家监控面板 (6位对家)</span>
+          <span className="text-sm font-bold text-[#d4af37]">🤖 追打对家监控面板 (7位对家)</span>
         </div>
         <div className="flex space-x-1.5 text-xs font-bold">
           <button
@@ -190,7 +213,7 @@ export const PlayerBStatus: React.FC<PlayerBStatusProps> = ({
                 : 'bg-black/60 text-amber-200/70 hover:bg-black hover:text-amber-100 border border-[#b8860b]/30'
             }`}
           >
-            全部对家 (6个)
+            全部对家 (7个)
           </button>
           <button
             type="button"
@@ -201,7 +224,7 @@ export const PlayerBStatus: React.FC<PlayerBStatusProps> = ({
                 : 'bg-black/60 text-amber-200/70 hover:bg-black hover:text-amber-100 border border-[#b8860b]/30'
             }`}
           >
-            B系列 (B, B-1, B-2)
+            B系列 (B, B-1, B-2, B-3)
           </button>
           <button
             type="button"
@@ -218,22 +241,29 @@ export const PlayerBStatus: React.FC<PlayerBStatusProps> = ({
       </div>
 
       {/* Grid of Bot Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {visibleBots.map((bot) => {
           const st = bot.state;
           const isTakeProfit = bot.takeProfitUnits > 0;
+          const hasStopLoss = (bot.stopLossUnits ?? 0) > 0;
           const targetProfitAmount = bot.takeProfitUnits * bot.chaseBetAmount;
+          const stopLossAmount = (bot.stopLossUnits ?? 0) * bot.chaseBetAmount;
           const currentProfit = st.profitSinceReset ?? 0;
 
           // Win rate
           const winRate = st.totalChaseHands > 0 ? ((st.chaseWins / st.totalChaseHands) * 100).toFixed(1) : '0.0';
+
+          const isHitStopLoss = hasStopLoss && currentProfit <= -stopLossAmount;
+          const isHitTakeProfit = isTakeProfit && currentProfit >= targetProfitAmount;
 
           return (
             <div
               key={bot.id}
               className={`bg-[#051a0b]/90 border-2 ${
                 st.isTakeProfitStopped
-                  ? 'border-yellow-400/80 shadow-[0_0_15px_rgba(234,179,8,0.25)]'
+                  ? isHitStopLoss
+                    ? 'border-red-500/80 shadow-[0_0_15px_rgba(239,68,68,0.25)]'
+                    : 'border-yellow-400/80 shadow-[0_0_15px_rgba(234,179,8,0.25)]'
                   : st.isChasing
                   ? 'border-amber-500/80 shadow-[0_0_12px_rgba(212,175,55,0.2)]'
                   : 'border-[#b8860b]/40'
@@ -245,11 +275,16 @@ export const PlayerBStatus: React.FC<PlayerBStatusProps> = ({
                   <div className="flex items-center space-x-2">
                     <span className="text-lg">🤖</span>
                     <div>
-                      <h3 className="font-serif-casino font-bold text-[#d4af37] text-base flex items-center gap-1.5">
+                      <h3 className="font-serif-casino font-bold text-[#d4af37] text-base flex items-center gap-1.5 flex-wrap">
                         {bot.name}
                         {isTakeProfit && (
                           <span className="text-[10px] px-1.5 py-0.2 bg-yellow-500/20 text-yellow-300 border border-yellow-500/40 rounded-full">
-                            止盈{bot.takeProfitUnits}注
+                            止盈+{bot.takeProfitUnits}注
+                          </span>
+                        )}
+                        {hasStopLoss && (
+                          <span className="text-[10px] px-1.5 py-0.2 bg-red-500/20 text-red-300 border border-red-500/40 rounded-full">
+                            止损-{bot.stopLossUnits}注
                           </span>
                         )}
                       </h3>
@@ -275,9 +310,11 @@ export const PlayerBStatus: React.FC<PlayerBStatusProps> = ({
                   </div>
 
                   <div
-                    className={`p-2.5 rounded-xl border flex flex-col justify-center items-center ${
+                    className={`p-2.5 rounded-xl border flex flex-col justify-center items-center text-center ${
                       st.isTakeProfitStopped
-                        ? 'bg-yellow-950/80 border-yellow-400/90 text-yellow-300'
+                        ? isHitStopLoss
+                          ? 'bg-red-950/80 border-red-500/90 text-red-300'
+                          : 'bg-yellow-950/80 border-yellow-400/90 text-yellow-300'
                         : st.isChasing
                         ? 'bg-amber-950/70 border-amber-500/80 text-amber-300 animate-pulse'
                         : 'bg-black/60 border-[#b8860b]/30 text-emerald-400'
@@ -286,7 +323,9 @@ export const PlayerBStatus: React.FC<PlayerBStatusProps> = ({
                     <span className="text-[10px] text-amber-200/70">当前模式</span>
                     <span className="text-xs sm:text-sm font-bold font-serif-casino">
                       {st.isTakeProfitStopped
-                        ? '🎯 已止盈 (本靴停手)'
+                        ? isHitStopLoss
+                          ? '🛑 已止损 (本靴停手)'
+                          : '🎯 已止盈 (本靴停手)'
                         : st.isChasing
                         ? '⚡ 追打中'
                         : '👀 观望中'}
@@ -317,12 +356,22 @@ export const PlayerBStatus: React.FC<PlayerBStatusProps> = ({
                   </div>
                 </div>
 
-                {/* Take Profit Target Progress Bar (If bot has Take Profit target) */}
+                {/* Take Profit & Stop Loss Target Progress Bar */}
                 {isTakeProfit && (
                   <div className="bg-black/60 p-2.5 rounded-xl border border-yellow-500/30 mb-3">
                     <div className="flex items-center justify-between text-[11px] mb-1">
-                      <span className="text-yellow-200/90 font-bold">止盈目标进度 ({bot.takeProfitUnits}注 = +¥{targetProfitAmount})</span>
-                      <span className={`font-mono font-bold ${currentProfit >= targetProfitAmount ? 'text-yellow-300' : currentProfit > 0 ? 'text-emerald-400' : 'text-amber-200/70'}`}>
+                      <span className="text-yellow-200/90 font-bold">
+                        {hasStopLoss ? `止盈+${bot.takeProfitUnits} / 止损-${bot.stopLossUnits}注` : `止盈进度 (${bot.takeProfitUnits}注 = +¥${targetProfitAmount})`}
+                      </span>
+                      <span className={`font-mono font-bold ${
+                        currentProfit >= targetProfitAmount
+                          ? 'text-yellow-300'
+                          : hasStopLoss && currentProfit <= -stopLossAmount
+                          ? 'text-red-400'
+                          : currentProfit > 0
+                          ? 'text-emerald-400'
+                          : 'text-amber-200/70'
+                      }`}>
                         {currentProfit >= 0 ? `+¥${currentProfit}` : `-¥${Math.abs(currentProfit)}`} / +¥{targetProfitAmount}
                       </span>
                     </div>
@@ -330,19 +379,21 @@ export const PlayerBStatus: React.FC<PlayerBStatusProps> = ({
                     <div className="w-full bg-black/80 rounded-full h-2.5 p-0.5 border border-yellow-500/30 overflow-hidden">
                       <div
                         style={{
-                          width: `${Math.min(100, Math.max(0, (currentProfit / targetProfitAmount) * 100))}%`,
+                          width: `${Math.min(100, Math.max(0, ((currentProfit + (hasStopLoss ? stopLossAmount : 0)) / (targetProfitAmount + (hasStopLoss ? stopLossAmount : 0))) * 100))}%`,
                         }}
                         className={`h-full rounded-full transition-all duration-300 ${
                           currentProfit >= targetProfitAmount
                             ? 'bg-gradient-to-r from-yellow-500 to-amber-300 shadow-[0_0_10px_#f59e0b]'
+                            : hasStopLoss && currentProfit <= -stopLossAmount
+                            ? 'bg-red-600 shadow-[0_0_10px_#ef4444]'
                             : currentProfit > 0
                             ? 'bg-emerald-500'
-                            : 'bg-red-500/50'
+                            : 'bg-red-500/60'
                         }`}
                       />
                     </div>
                     <p className="text-[9px] text-amber-200/50 mt-1">
-                      * 达标后本靴停止追打，换新鞋重置；未达标跨靴累积。
+                      {hasStopLoss ? `* 本靴单靴盈利+¥${targetProfitAmount}止盈，亏损-¥${stopLossAmount}止损停手。` : `* 达标后本靴停止追打，换新鞋重置。`}
                     </p>
                   </div>
                 )}
@@ -360,10 +411,11 @@ export const PlayerBStatus: React.FC<PlayerBStatusProps> = ({
                           key={amt}
                           type="button"
                           onClick={() => {
-                            const keyMap: Record<string, 'B' | 'B1' | 'B2' | 'C' | 'C1' | 'C2'> = {
+                            const keyMap: Record<string, 'B' | 'B1' | 'B2' | 'B3' | 'C' | 'C1' | 'C2'> = {
                               B: 'B',
                               'B-1': 'B1',
                               'B-2': 'B2',
+                              'B-3': 'B3',
                               C: 'C',
                               'C-1': 'C1',
                               'C-2': 'C2',
@@ -392,7 +444,9 @@ export const PlayerBStatus: React.FC<PlayerBStatusProps> = ({
                     <span className="text-amber-200/70 text-[11px]">本手跟注:</span>
                     <span className="font-mono font-bold text-xs">
                       {st.isTakeProfitStopped ? (
-                        <span className="text-yellow-300">🎯 已止盈停手</span>
+                        <span className={isHitStopLoss ? 'text-red-400' : 'text-yellow-300'}>
+                          {isHitStopLoss ? '🛑 已止损停手' : '🎯 已止盈停手'}
+                        </span>
                       ) : bot.currentBet.mainBet === 'PLAYER' ? (
                         <span className="text-blue-400">押闲 ¥{bot.currentBet.mainAmount}</span>
                       ) : bot.currentBet.mainBet === 'BANKER' ? (

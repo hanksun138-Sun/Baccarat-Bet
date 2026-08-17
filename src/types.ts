@@ -75,6 +75,14 @@ export interface HandResult {
   b2CumulativeProfit?: number;
   b2BankrollAfter?: number;
 
+  // Player B-3 outcome (Take Profit +4 units, Stop Loss -8 units)
+  b3Bet?: PlayerBBet;
+  b3WasChasing?: boolean;
+  b3MainResult?: 'WIN' | 'LOSS' | 'PUSH' | 'NO_BET';
+  b3NetProfit?: number;
+  b3CumulativeProfit?: number;
+  b3BankrollAfter?: number;
+
   // Player C outcome
   cBet: PlayerBBet;
   cWasChasing: boolean;
@@ -106,6 +114,8 @@ export interface HandResult {
   b1TakeProfitStoppedAfter?: boolean;
   b2ChasingAfter?: boolean;
   b2TakeProfitStoppedAfter?: boolean;
+  b3ChasingAfter?: boolean;
+  b3TakeProfitStoppedAfter?: boolean;
   cChasingAfter: boolean;
   aConsecutiveWinsAfterC: number;
   c1ChasingAfter?: boolean;
@@ -137,6 +147,7 @@ export interface ShoeRecord {
   bProfit: number;
   b1Profit?: number;
   b2Profit?: number;
+  b3Profit?: number;
   cProfit: number;
   c1Profit?: number;
   c2Profit?: number;
@@ -149,6 +160,7 @@ export interface ShoeRecord {
   bBankrollEnd: number;
   b1BankrollEnd?: number;
   b2BankrollEnd?: number;
+  b3BankrollEnd?: number;
   cBankrollEnd: number;
   c1BankrollEnd?: number;
   c2BankrollEnd?: number;
@@ -163,6 +175,8 @@ export interface GameSettings {
   b1PostExhaustionChaseBet?: number;
   b2ChaseBet?: number; // Default 200 (Player B-2 normal chase bet amount)
   b2PostExhaustionChaseBet?: number;
+  b3ChaseBet?: number; // Default 200 (Player B-3 normal chase bet amount)
+  b3PostExhaustionChaseBet?: number;
   cChaseBet: number; // Default 200 (Player C normal chase bet amount)
   cPostExhaustionChaseBet: number; // Default 200 (Player C chase bet amount after Player A loses all funds)
   c1ChaseBet?: number; // Default 200 (Player C-1 normal chase bet amount)
@@ -219,6 +233,8 @@ export interface GameStats {
   b1MaxDrawdown?: number;
   b2MaxBankroll?: number;
   b2MaxDrawdown?: number;
+  b3MaxBankroll?: number;
+  b3MaxDrawdown?: number;
   cMaxBankroll: number;
   cMaxDrawdown: number;
   c1MaxBankroll?: number;
@@ -246,6 +262,10 @@ export interface D7Stats {
   b2D7PlayerLosses: number;
   b2D7NoBets: number;
 
+  b3D7BankerPushes: number;
+  b3D7PlayerLosses: number;
+  b3D7NoBets: number;
+
   cD7BankerPushes: number;
   cD7PlayerLosses: number;
   cD7NoBets: number;
@@ -265,6 +285,7 @@ export interface TrendPoint {
   bCum: number;
   b1Cum: number;
   b2Cum: number;
+  b3Cum: number;
   cCum: number;
   c1Cum: number;
   c2Cum: number;
@@ -285,6 +306,9 @@ export const initialD7Stats: D7Stats = {
   b2D7BankerPushes: 0,
   b2D7PlayerLosses: 0,
   b2D7NoBets: 0,
+  b3D7BankerPushes: 0,
+  b3D7PlayerLosses: 0,
+  b3D7NoBets: 0,
   cD7BankerPushes: 0,
   cD7PlayerLosses: 0,
   cD7NoBets: 0,

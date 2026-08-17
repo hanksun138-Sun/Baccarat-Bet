@@ -319,6 +319,10 @@ export function getCumulativeProfitB2(results: HandResult[]): number {
   return results.reduce((acc, r) => acc + (r.b2NetProfit ?? 0), 0);
 }
 
+export function getCumulativeProfitB3(results: HandResult[]): number {
+  return results.reduce((acc, r) => acc + (r.b3NetProfit ?? 0), 0);
+}
+
 export function getCumulativeProfitC(results: HandResult[]): number {
   return results.reduce((acc, r) => acc + (r.cNetProfit ?? 0), 0);
 }
@@ -366,6 +370,11 @@ export function exportToCSV(results: HandResult[]): string {
     'Player B-2 Hand Profit',
     'Player B-2 Cumulative Profit',
     'Player B-2 Bankroll',
+    'Player B-3 Chasing?',
+    'Player B-3 Bet',
+    'Player B-3 Hand Profit',
+    'Player B-3 Cumulative Profit',
+    'Player B-3 Bankroll',
     'Player C Chasing?',
     'Player C Bet',
     'Player C Hand Profit',
@@ -387,6 +396,7 @@ export function exportToCSV(results: HandResult[]): string {
   let cumB = 0;
   let cumB1 = 0;
   let cumB2 = 0;
+  let cumB3 = 0;
   let cumC = 0;
   let cumC1 = 0;
   let cumC2 = 0;
@@ -396,12 +406,14 @@ export function exportToCSV(results: HandResult[]): string {
     cumB += r.bNetProfit;
     cumB1 += r.b1NetProfit ?? 0;
     cumB2 += r.b2NetProfit ?? 0;
+    cumB3 += r.b3NetProfit ?? 0;
     cumC += r.cNetProfit ?? 0;
     cumC1 += r.c1NetProfit ?? 0;
     cumC2 += r.c2NetProfit ?? 0;
 
     const b1Status = r.b1TakeProfitStoppedAfter ? '已止盈' : r.b1WasChasing ? '追打中' : '观望中';
     const b2Status = r.b2TakeProfitStoppedAfter ? '已止盈' : r.b2WasChasing ? '追打中' : '观望中';
+    const b3Status = r.b3TakeProfitStoppedAfter ? '已停手(止盈/止损)' : r.b3WasChasing ? '追打中' : '观望中';
     const c1Status = r.c1TakeProfitStoppedAfter ? '已止盈' : r.c1WasChasing ? '追打中' : '观望中';
     const c2Status = r.c2TakeProfitStoppedAfter ? '已止盈' : r.c2WasChasing ? '追打中' : '观望中';
 
@@ -439,6 +451,12 @@ export function exportToCSV(results: HandResult[]): string {
       r.b2NetProfit ?? 0,
       cumB2,
       r.b2BankrollAfter ?? 0,
+
+      b3Status,
+      r.b3Bet?.mainBet === 'PLAYER' ? '闲' : r.b3Bet?.mainBet === 'BANKER' ? '庄' : '未注',
+      r.b3NetProfit ?? 0,
+      cumB3,
+      r.b3BankrollAfter ?? 0,
 
       r.cWasChasing ? '追打中' : '观望中',
       r.cBet?.mainBet === 'PLAYER' ? '闲' : r.cBet?.mainBet === 'BANKER' ? '庄' : '未注',

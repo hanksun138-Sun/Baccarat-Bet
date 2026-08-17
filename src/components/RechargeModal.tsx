@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-export type RechargePlayer = 'A' | 'B' | 'B-1' | 'B-2' | 'C' | 'C-1' | 'C-2';
+export type RechargePlayer = 'A' | 'B' | 'B-1' | 'B-2' | 'B-3' | 'C' | 'C-1' | 'C-2';
 
 interface RechargeModalProps {
   isOpen: boolean;
@@ -29,12 +29,25 @@ export const RechargeModal: React.FC<RechargeModalProps> = ({
 
   const presetAmounts = [500, 1000, 5000, 10000];
 
+  const getPlayerLabel = (p: RechargePlayer) => {
+    switch (p) {
+      case 'A': return '玩家A (我)';
+      case 'B': return '玩家B (无止盈)';
+      case 'B-1': return '玩家B-1 (止盈3注)';
+      case 'B-2': return '玩家B-2 (止盈2注)';
+      case 'B-3': return '玩家B-3 (止盈+4/止损-8)';
+      case 'C': return '玩家C (无止盈)';
+      case 'C-1': return '玩家C-1 (止盈3注)';
+      case 'C-2': return '玩家C-2 (止盈2注)';
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
       <div className="bg-[#051a0b] border-2 border-[#b8860b] rounded-2xl p-6 max-w-sm w-full shadow-2xl space-y-4 animate-scale-up text-amber-100 font-sans">
         <div className="flex items-center justify-between border-b border-[#b8860b]/30 pb-3">
           <h3 className="text-lg font-serif-casino font-bold text-[#d4af37]">
-            💰 资金充值 ({targetPlayer === 'A' ? '玩家A (我)' : targetPlayer === 'B' ? '玩家B' : targetPlayer === 'B-1' ? '玩家B-1 (止盈3注)' : targetPlayer === 'B-2' ? '玩家B-2 (止盈2注)' : targetPlayer === 'C' ? '玩家C' : targetPlayer === 'C-1' ? '玩家C-1 (止盈3注)' : '玩家C-2 (止盈2注)'})
+            💰 资金充值 ({getPlayerLabel(targetPlayer)})
           </h3>
           <button
             onClick={onClose}

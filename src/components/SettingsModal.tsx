@@ -24,6 +24,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [bPostExhaustionChaseBet, setBPostExhaustionChaseBet] = useState<number>(settings.bPostExhaustionChaseBet);
   const [b1ChaseBet, setB1ChaseBet] = useState<number>(settings.b1ChaseBet ?? 200);
   const [b2ChaseBet, setB2ChaseBet] = useState<number>(settings.b2ChaseBet ?? 200);
+  const [b3ChaseBet, setB3ChaseBet] = useState<number>(settings.b3ChaseBet ?? 200);
   const [cChaseBet, setCChaseBet] = useState<number>(settings.cChaseBet ?? 200);
   const [cPostExhaustionChaseBet, setCPostExhaustionChaseBet] = useState<number>(settings.cPostExhaustionChaseBet ?? 200);
   const [c1ChaseBet, setC1ChaseBet] = useState<number>(settings.c1ChaseBet ?? 200);
@@ -50,6 +51,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       b1PostExhaustionChaseBet: Math.max(10, b1ChaseBet),
       b2ChaseBet: Math.max(10, b2ChaseBet),
       b2PostExhaustionChaseBet: Math.max(10, b2ChaseBet),
+      b3ChaseBet: Math.max(10, b3ChaseBet),
+      b3PostExhaustionChaseBet: Math.max(10, b3ChaseBet),
       cChaseBet: Math.max(10, cChaseBet),
       cPostExhaustionChaseBet: Math.max(10, cPostExhaustionChaseBet),
       c1ChaseBet: Math.max(10, c1ChaseBet),

@@ -9,6 +9,7 @@ interface StatsPanelProps {
   bState: PlayerBState;
   b1State?: PlayerBotState;
   b2State?: PlayerBotState;
+  b3State?: PlayerBotState;
   cState?: PlayerCState;
   c1State?: PlayerBotState;
   c2State?: PlayerBotState;
@@ -19,6 +20,7 @@ interface StatsPanelProps {
   bBankroll: number;
   b1Bankroll?: number;
   b2Bankroll?: number;
+  b3Bankroll?: number;
   cBankroll: number;
   c1Bankroll?: number;
   c2Bankroll?: number;
@@ -32,6 +34,7 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({
   bState,
   b1State,
   b2State,
+  b3State,
   cState,
   c1State,
   c2State,
@@ -42,6 +45,7 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({
   bBankroll,
   b1Bankroll = 10000,
   b2Bankroll = 10000,
+  b3Bankroll = 10000,
   cBankroll,
   c1Bankroll = 10000,
   c2Bankroll = 10000,
@@ -102,12 +106,12 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({
 【核心信息】
 - 总鞋数: ${totalShoesCount}靴 | 总手数: ${totalHandsCount}手
 - 玩家A累计盈亏: ¥${runningCumA}
-- 玩家B (无止盈): ¥${runningCumB} | B-1 (止盈3注): ¥${runningCumB1} | B-2 (止盈2注): ¥${runningCumB2}
+- 玩家B (无止盈): ¥${runningCumB} | B-1 (止盈3注): ¥${runningCumB1} | B-2 (止盈2注): ¥${runningCumB2} | B-3 (止盈+4/止损-8): ¥${runningCumB3}
 - 玩家C (无止盈): ¥${runningCumC} | C-1 (止盈3注): ¥${runningCumC1} | C-2 (止盈2注): ¥${runningCumC2}
 
 【请帮我分析】
-1. 各玩家（A及追打对家B/B-1/B-2/C/C-1/C-2）的胜率、期望收益及回撤风险。
-2. 止盈机制（2注与3注）在面对多靴连败/长龙时的风控有效性。
+1. 各玩家（A及追打对家B/B-1/B-2/B-3/C/C-1/C-2）的胜率、期望收益及回撤风险。
+2. 止盈止损机制（B-3的单靴+4止盈与-8止损对比B-1/B-2及无限制）在面对多靴连败/长龙时的风控有效性。
 3. 给出的追打策略建议。
 
 --- CSV 完整数据 ---
@@ -128,6 +132,7 @@ ${csvStr}
   const currentShoeProfitB = handResults.reduce((s, h) => s + h.bNetProfit, 0);
   const currentShoeProfitB1 = handResults.reduce((s, h) => s + (h.b1NetProfit ?? 0), 0);
   const currentShoeProfitB2 = handResults.reduce((s, h) => s + (h.b2NetProfit ?? 0), 0);
+  const currentShoeProfitB3 = handResults.reduce((s, h) => s + (h.b3NetProfit ?? 0), 0);
   const currentShoeProfitC = handResults.reduce((s, h) => s + h.cNetProfit, 0);
   const currentShoeProfitC1 = handResults.reduce((s, h) => s + (h.c1NetProfit ?? 0), 0);
   const currentShoeProfitC2 = handResults.reduce((s, h) => s + (h.c2NetProfit ?? 0), 0);
@@ -146,6 +151,7 @@ ${csvStr}
     bProfit: currentShoeProfitB,
     b1Profit: currentShoeProfitB1,
     b2Profit: currentShoeProfitB2,
+    b3Profit: currentShoeProfitB3,
     cProfit: currentShoeProfitC,
     c1Profit: currentShoeProfitC1,
     c2Profit: currentShoeProfitC2,
@@ -158,6 +164,7 @@ ${csvStr}
     bBankrollEnd: bBankroll,
     b1BankrollEnd: b1Bankroll,
     b2BankrollEnd: b2Bankroll,
+    b3BankrollEnd: b3Bankroll,
     cBankrollEnd: cBankroll,
     c1BankrollEnd: c1Bankroll,
     c2BankrollEnd: c2Bankroll,
@@ -174,6 +181,7 @@ ${csvStr}
   let runningCumB = 0;
   let runningCumB1 = 0;
   let runningCumB2 = 0;
+  let runningCumB3 = 0;
   let runningCumC = 0;
   let runningCumC1 = 0;
   let runningCumC2 = 0;
@@ -183,6 +191,7 @@ ${csvStr}
     runningCumB += s.bProfit;
     runningCumB1 += s.b1Profit ?? 0;
     runningCumB2 += s.b2Profit ?? 0;
+    runningCumB3 += s.b3Profit ?? 0;
     runningCumC += s.cProfit ?? 0;
     runningCumC1 += s.c1Profit ?? 0;
     runningCumC2 += s.c2Profit ?? 0;
@@ -192,6 +201,7 @@ ${csvStr}
       cumB: runningCumB,
       cumB1: runningCumB1,
       cumB2: runningCumB2,
+      cumB3: runningCumB3,
       cumC: runningCumC,
       cumC1: runningCumC1,
       cumC2: runningCumC2,
@@ -206,6 +216,7 @@ ${csvStr}
   const bChaseWinRate = bState.totalChaseHands > 0 ? ((bState.chaseWinsB / bState.totalChaseHands) * 100).toFixed(1) : '0.0';
   const b1ChaseWinRate = b1State && b1State.totalChaseHands > 0 ? ((b1State.chaseWins / b1State.totalChaseHands) * 100).toFixed(1) : '0.0';
   const b2ChaseWinRate = b2State && b2State.totalChaseHands > 0 ? ((b2State.chaseWins / b2State.totalChaseHands) * 100).toFixed(1) : '0.0';
+  const b3ChaseWinRate = b3State && b3State.totalChaseHands > 0 ? ((b3State.chaseWins / b3State.totalChaseHands) * 100).toFixed(1) : '0.0';
   const cChaseWinRate = cState && cState.totalChaseHands > 0 ? ((cState.chaseWinsC / cState.totalChaseHands) * 100).toFixed(1) : '0.0';
   const c1ChaseWinRate = c1State && c1State.totalChaseHands > 0 ? ((c1State.chaseWins / c1State.totalChaseHands) * 100).toFixed(1) : '0.0';
   const c2ChaseWinRate = c2State && c2State.totalChaseHands > 0 ? ((c2State.chaseWins / c2State.totalChaseHands) * 100).toFixed(1) : '0.0';
@@ -234,6 +245,10 @@ ${csvStr}
   const b2D7PlayerLosses = d7Stats ? d7Stats.b2D7PlayerLosses : effectiveAllHands.filter((h) => h.isDragon7 && h.b2Bet?.mainBet === 'PLAYER').length;
   const b2D7NoBets = d7Stats ? d7Stats.b2D7NoBets : effectiveAllHands.filter((h) => h.isDragon7 && (!h.b2Bet || h.b2Bet.mainBet === null)).length;
 
+  const b3D7BankerPushes = d7Stats ? d7Stats.b3D7BankerPushes : effectiveAllHands.filter((h) => h.isDragon7 && h.b3Bet?.mainBet === 'BANKER').length;
+  const b3D7PlayerLosses = d7Stats ? d7Stats.b3D7PlayerLosses : effectiveAllHands.filter((h) => h.isDragon7 && h.b3Bet?.mainBet === 'PLAYER').length;
+  const b3D7NoBets = d7Stats ? d7Stats.b3D7NoBets : effectiveAllHands.filter((h) => h.isDragon7 && (!h.b3Bet || h.b3Bet.mainBet === null)).length;
+
   const cD7BankerPushes = d7Stats ? d7Stats.cD7BankerPushes : effectiveAllHands.filter((h) => h.isDragon7 && h.cBet?.mainBet === 'BANKER').length;
   const cD7PlayerLosses = d7Stats ? d7Stats.cD7PlayerLosses : effectiveAllHands.filter((h) => h.isDragon7 && h.cBet?.mainBet === 'PLAYER').length;
   const cD7NoBets = d7Stats ? d7Stats.cD7NoBets : effectiveAllHands.filter((h) => h.isDragon7 && (!h.cBet || h.cBet.mainBet === null)).length;
@@ -250,13 +265,14 @@ ${csvStr}
   const allTimePoints: TrendPoint[] = (trendPoints && trendPoints.length > 0)
     ? trendPoints
     : [
-        { handNumber: 0, aCum: 0, bCum: 0, b1Cum: 0, b2Cum: 0, cCum: 0, c1Cum: 0, c2Cum: 0 },
+        { handNumber: 0, aCum: 0, bCum: 0, b1Cum: 0, b2Cum: 0, b3Cum: 0, cCum: 0, c1Cum: 0, c2Cum: 0 },
         ...effectiveAllHands.map((h) => ({
           handNumber: h.handNumber,
           aCum: h.aBankrollAfter - 1000,
           bCum: h.bBankrollAfter - 10000,
           b1Cum: (h.b1BankrollAfter ?? 10000) - 10000,
           b2Cum: (h.b2BankrollAfter ?? 10000) - 10000,
+          b3Cum: (h.b3BankrollAfter ?? 10000) - 10000,
           cCum: (h.cBankrollAfter ?? 10000) - 10000,
           c1Cum: (h.c1BankrollAfter ?? 10000) - 10000,
           c2Cum: (h.c2BankrollAfter ?? 10000) - 10000,
@@ -268,6 +284,7 @@ ${csvStr}
   const histMaxDDB = stats.bMaxDrawdown ?? 0;
   const histMaxDDB1 = stats.b1MaxDrawdown ?? 0;
   const histMaxDDB2 = stats.b2MaxDrawdown ?? 0;
+  const histMaxDDB3 = stats.b3MaxDrawdown ?? 0;
   const histMaxDDC = stats.cMaxDrawdown ?? 0;
   const histMaxDDC1 = stats.c1MaxDrawdown ?? 0;
   const histMaxDDC2 = stats.c2MaxDrawdown ?? 0;
@@ -280,6 +297,7 @@ ${csvStr}
   let bPath = '';
   let b1Path = '';
   let b2Path = '';
+  let b3Path = '';
   let cPath = '';
   let c1Path = '';
   let c2Path = '';
@@ -299,6 +317,8 @@ ${csvStr}
       if (p.b1Cum > maxCum) maxCum = p.b1Cum;
       if (p.b2Cum < minCum) minCum = p.b2Cum;
       if (p.b2Cum > maxCum) maxCum = p.b2Cum;
+      if ((p.b3Cum ?? 0) < minCum) minCum = (p.b3Cum ?? 0);
+      if ((p.b3Cum ?? 0) > maxCum) maxCum = (p.b3Cum ?? 0);
       if (p.cCum < minCum) minCum = p.cCum;
       if (p.cCum > maxCum) maxCum = p.cCum;
       if (p.c1Cum < minCum) minCum = p.c1Cum;
@@ -326,6 +346,7 @@ ${csvStr}
     bPath = samplePoints.map((d, i) => `${i === 0 ? 'M' : 'L'} ${((i / totalPts) * svgWidth).toFixed(1)} ${getSvgY(d.bCum).toFixed(1)}`).join(' ');
     b1Path = samplePoints.map((d, i) => `${i === 0 ? 'M' : 'L'} ${((i / totalPts) * svgWidth).toFixed(1)} ${getSvgY(d.b1Cum).toFixed(1)}`).join(' ');
     b2Path = samplePoints.map((d, i) => `${i === 0 ? 'M' : 'L'} ${((i / totalPts) * svgWidth).toFixed(1)} ${getSvgY(d.b2Cum).toFixed(1)}`).join(' ');
+    b3Path = samplePoints.map((d, i) => `${i === 0 ? 'M' : 'L'} ${((i / totalPts) * svgWidth).toFixed(1)} ${getSvgY(d.b3Cum ?? 0).toFixed(1)}`).join(' ');
     cPath = samplePoints.map((d, i) => `${i === 0 ? 'M' : 'L'} ${((i / totalPts) * svgWidth).toFixed(1)} ${getSvgY(d.cCum).toFixed(1)}`).join(' ');
     c1Path = samplePoints.map((d, i) => `${i === 0 ? 'M' : 'L'} ${((i / totalPts) * svgWidth).toFixed(1)} ${getSvgY(d.c1Cum).toFixed(1)}`).join(' ');
     c2Path = samplePoints.map((d, i) => `${i === 0 ? 'M' : 'L'} ${((i / totalPts) * svgWidth).toFixed(1)} ${getSvgY(d.c2Cum).toFixed(1)}`).join(' ');
@@ -380,7 +401,7 @@ ${csvStr}
       )}
 
       {/* GLOBAL SUMMARY STAT CARDS GRID */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 mb-4 font-sans text-xs">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 mb-4 font-sans text-xs">
         <div className="bg-black/75 p-2 rounded-xl border border-[#b8860b]/40">
           <span className="text-[10px] text-amber-200/70 block font-bold">总运行靴数/手数</span>
           <div className="flex items-baseline space-x-1 mt-0.5">
@@ -424,6 +445,14 @@ ${csvStr}
           <span className="text-[9px] text-amber-200/50 block">胜率: {b2ChaseWinRate}%</span>
         </div>
 
+        <div className="bg-black/75 p-2 rounded-xl border border-amber-400/50">
+          <span className="text-[10px] text-amber-200/90 block font-bold">玩家B-3 (+4/-8)</span>
+          <span className={`text-base font-mono font-bold block ${runningCumB3 >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+            {runningCumB3 >= 0 ? `+¥${runningCumB3}` : `-¥${Math.abs(runningCumB3)}`}
+          </span>
+          <span className="text-[9px] text-amber-200/50 block">胜率: {b3ChaseWinRate}%</span>
+        </div>
+
         <div className="bg-black/75 p-2 rounded-xl border border-sky-500/30">
           <span className="text-[10px] text-amber-200/70 block font-bold">玩家C (无止盈)</span>
           <span className={`text-base font-mono font-bold block ${runningCumC >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
@@ -432,8 +461,8 @@ ${csvStr}
           <span className="text-[9px] text-amber-200/50 block">胜率: {cChaseWinRate}%</span>
         </div>
 
-        <div className="bg-black/75 p-2 rounded-xl border border-sky-400/40 col-span-2 md:col-span-1">
-          <span className="text-[10px] text-sky-200/80 block font-bold">玩家C-1 / C-2 盈亏</span>
+        <div className="bg-black/75 p-2 rounded-xl border border-sky-400/40">
+          <span className="text-[10px] text-sky-200/80 block font-bold">玩家C-1 / C-2</span>
           <div className="text-[10px] font-mono mt-0.5 space-y-0.5">
             <div>C-1(3注): <strong className={runningCumC1 >= 0 ? 'text-emerald-400' : 'text-red-400'}>{runningCumC1 >= 0 ? `+¥${runningCumC1}` : `-¥${Math.abs(runningCumC1)}`}</strong></div>
             <div>C-2(2注): <strong className={runningCumC2 >= 0 ? 'text-emerald-400' : 'text-red-400'}>{runningCumC2 >= 0 ? `+¥${runningCumC2}` : `-¥${Math.abs(runningCumC2)}`}</strong></div>
@@ -457,7 +486,7 @@ ${csvStr}
           </span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-2">
           {/* Player A */}
           <div className="bg-black/70 p-2 rounded-lg border border-amber-500/40">
             <div className="flex items-center justify-between font-bold text-amber-300 text-[11px] mb-1">
@@ -542,6 +571,28 @@ ${csvStr}
               <div className="flex justify-between text-amber-200/40">
                 <span>观望未下注:</span>
                 <span className="text-amber-200/50 font-mono">{b2D7NoBets}次</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Player B-3 */}
+          <div className="bg-black/70 p-2 rounded-lg border border-amber-400/40">
+            <div className="flex items-center justify-between font-bold text-amber-300 text-[11px] mb-1">
+              <span>玩家B-3</span>
+              <span className="text-[9px] text-amber-200/70">+4/-8注</span>
+            </div>
+            <div className="space-y-0.5 text-[10px]">
+              <div className="flex justify-between text-amber-200 font-bold">
+                <span>押庄不赢不输:</span>
+                <span className="text-emerald-400 font-mono">{b3D7BankerPushes}次</span>
+              </div>
+              <div className="flex justify-between text-amber-200/60">
+                <span>押闲遇龙7亏损:</span>
+                <span className="text-red-400 font-mono">{b3D7PlayerLosses}次</span>
+              </div>
+              <div className="flex justify-between text-amber-200/40">
+                <span>观望未下注:</span>
+                <span className="text-amber-200/50 font-mono">{b3D7NoBets}次</span>
               </div>
             </div>
           </div>
@@ -667,7 +718,7 @@ ${csvStr}
                 暂无靴级历史记录 (开始发牌更换牌靴后生成记录)
               </div>
             ) : (
-              <table className="w-full text-left text-xs text-amber-100/90 font-mono border-collapse min-w-[850px]">
+              <table className="w-full text-left text-xs text-amber-100/90 font-mono border-collapse min-w-[920px]">
                 <thead>
                   <tr className="border-b border-[#b8860b]/40 text-[10px] text-amber-200/70 font-sans bg-amber-950/30">
                     <th className="py-1.5 px-1.5">靴次</th>
@@ -677,6 +728,7 @@ ${csvStr}
                     <th className="py-1.5 px-1.5">玩家B</th>
                     <th className="py-1.5 px-1.5">玩家B-1(止盈3注)</th>
                     <th className="py-1.5 px-1.5">玩家B-2(止盈2注)</th>
+                    <th className="py-1.5 px-1.5">玩家B-3(+4/-8)</th>
                     <th className="py-1.5 px-1.5">玩家C</th>
                     <th className="py-1.5 px-1.5">玩家C-1(止盈3注)</th>
                     <th className="py-1.5 px-1.5">玩家C-2(止盈2注)</th>
@@ -713,6 +765,7 @@ ${csvStr}
                         {renderProfitCell(shoe.bProfit, shoe.cumB)}
                         {renderProfitCell(shoe.b1Profit ?? 0, shoe.cumB1)}
                         {renderProfitCell(shoe.b2Profit ?? 0, shoe.cumB2)}
+                        {renderProfitCell(shoe.b3Profit ?? 0, shoe.cumB3)}
                         {renderProfitCell(shoe.cProfit ?? 0, shoe.cumC)}
                         {renderProfitCell(shoe.c1Profit ?? 0, shoe.cumC1)}
                         {renderProfitCell(shoe.c2Profit ?? 0, shoe.cumC2)}
@@ -732,7 +785,7 @@ ${csvStr}
           {/* Section 1: Overall Cumulative Net Profit Bar Chart */}
           <div className="bg-black/75 p-4 rounded-xl border border-[#b8860b]/30">
             <div className="flex flex-wrap items-center justify-between text-xs mb-3 gap-1">
-              <span className="text-amber-200 font-bold text-sm">📊 7位玩家总累计净盈亏柱状图对比 (A vs B/B-1/B-2 vs C/C-1/C-2)</span>
+              <span className="text-amber-200 font-bold text-sm">📊 8位玩家总累计净盈亏柱状图对比 (A vs B/B-1/B-2/B-3 vs C/C-1/C-2)</span>
               <span className="text-[10px] text-amber-200/60">* 绿色代表盈利，红色代表亏损</span>
             </div>
 
@@ -743,6 +796,7 @@ ${csvStr}
                 { id: 'B', name: '玩家B (无止盈)', profit: runningCumB, color: '#10b981', bgPos: 'from-emerald-600 to-emerald-400' },
                 { id: 'B-1', name: '玩家B-1 (止盈3注)', profit: runningCumB1, color: '#eab308', bgPos: 'from-yellow-600 to-yellow-400' },
                 { id: 'B-2', name: '玩家B-2 (止盈2注)', profit: runningCumB2, color: '#f59e0b', bgPos: 'from-amber-600 to-amber-400' },
+                { id: 'B-3', name: '玩家B-3 (+4/-8注)', profit: runningCumB3, color: '#fbbf24', bgPos: 'from-amber-500 to-yellow-200' },
                 { id: 'C', name: '玩家C (无止盈)', profit: runningCumC, color: '#38bdf8', bgPos: 'from-sky-600 to-sky-400' },
                 { id: 'C-1', name: '玩家C-1 (止盈3注)', profit: runningCumC1, color: '#06b6d4', bgPos: 'from-cyan-600 to-cyan-400' },
                 { id: 'C-2', name: '玩家C-2 (止盈2注)', profit: runningCumC2, color: '#0284c7', bgPos: 'from-blue-600 to-blue-400' },
@@ -859,6 +913,7 @@ ${csvStr}
                     { name: 'B', profit: s.bProfit, color: '#10b981' },
                     { name: 'B-1', profit: s.b1Profit ?? 0, color: '#eab308' },
                     { name: 'B-2', profit: s.b2Profit ?? 0, color: '#f59e0b' },
+                    { name: 'B-3', profit: s.b3Profit ?? 0, color: '#fbbf24' },
                     { name: 'C', profit: s.cProfit ?? 0, color: '#38bdf8' },
                     { name: 'C-1', profit: s.c1Profit ?? 0, color: '#06b6d4' },
                     { name: 'C-2', profit: s.c2Profit ?? 0, color: '#0284c7' },
@@ -878,14 +933,14 @@ ${csvStr}
                       </div>
 
                       {/* Bar group for this shoe */}
-                      <div className="grid grid-cols-7 gap-1.5 pt-1">
+                      <div className="grid grid-cols-8 gap-1 pt-1">
                         {shoePlayers.map((p) => {
                           const isPos = p.profit >= 0;
                           const barWidth = Math.min(100, (Math.abs(p.profit) / maxShoeAbs) * 100);
 
                           return (
-                            <div key={p.name} className="flex flex-col items-center bg-black/50 p-1.5 rounded border border-white/5">
-                              <span className="text-[10px] font-bold" style={{ color: p.color }}>
+                            <div key={p.name} className="flex flex-col items-center bg-black/50 p-1 rounded border border-white/5">
+                              <span className="text-[9px] font-bold" style={{ color: p.color }}>
                                 {p.name}
                               </span>
                               <div className="w-full bg-black h-1.5 rounded-full my-1 overflow-hidden">
@@ -894,7 +949,7 @@ ${csvStr}
                                   className={`h-full rounded-full ${isPos ? 'bg-emerald-400' : 'bg-red-500'}`}
                                 />
                               </div>
-                              <span className={`text-[9px] font-mono font-bold ${isPos ? 'text-emerald-400' : 'text-red-400'}`}>
+                              <span className={`text-[8px] font-mono font-bold ${isPos ? 'text-emerald-400' : 'text-red-400'}`}>
                                 {isPos ? `+${p.profit}` : p.profit}
                               </span>
                             </div>
@@ -920,6 +975,7 @@ ${csvStr}
                 { name: '玩家B (无止盈)', winRate: parseFloat(bChaseWinRate), color: '#10b981', label: `${bState.chaseWinsB}胜/${bState.chaseLossesB}负` },
                 { name: '玩家B-1 (止盈3注)', winRate: parseFloat(b1ChaseWinRate), color: '#eab308', label: `${b1State?.chaseWins ?? 0}胜/${b1State?.chaseLosses ?? 0}负` },
                 { name: '玩家B-2 (止盈2注)', winRate: parseFloat(b2ChaseWinRate), color: '#f59e0b', label: `${b2State?.chaseWins ?? 0}胜/${b2State?.chaseLosses ?? 0}负` },
+                { name: '玩家B-3 (+4/-8注)', winRate: parseFloat(b3ChaseWinRate), color: '#fbbf24', label: `${b3State?.chaseWins ?? 0}胜/${b3State?.chaseLosses ?? 0}负` },
                 { name: '玩家C (无止盈)', winRate: parseFloat(cChaseWinRate), color: '#38bdf8', label: `${cState?.chaseWinsC ?? 0}胜/${cState?.chaseLossesC ?? 0}负` },
                 { name: '玩家C-1 (止盈3注)', winRate: parseFloat(c1ChaseWinRate), color: '#06b6d4', label: `${c1State?.chaseWins ?? 0}胜/${c1State?.chaseLosses ?? 0}负` },
                 { name: '玩家C-2 (止盈2注)', winRate: parseFloat(c2ChaseWinRate), color: '#0284c7', label: `${c2State?.chaseWins ?? 0}胜/${c2State?.chaseLosses ?? 0}负` },
@@ -972,6 +1028,7 @@ ${csvStr}
                 <path d={bPath} fill="none" stroke="#10b981" strokeWidth="2" />
                 <path d={b1Path} fill="none" stroke="#eab308" strokeWidth="1.5" strokeDasharray="4 2" />
                 <path d={b2Path} fill="none" stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="2 2" />
+                <path d={b3Path} fill="none" stroke="#fbbf24" strokeWidth="2" strokeDasharray="6 2" />
                 <path d={cPath} fill="none" stroke="#38bdf8" strokeWidth="2" />
                 <path d={c1Path} fill="none" stroke="#06b6d4" strokeWidth="1.5" strokeDasharray="4 2" />
                 <path d={c2Path} fill="none" stroke="#0284c7" strokeWidth="1.5" strokeDasharray="2 2" />
@@ -987,6 +1044,7 @@ ${csvStr}
               <span className="text-emerald-400">━ 玩家B (无止盈)</span>
               <span className="text-yellow-400">╍ 玩家B-1 (止盈3注)</span>
               <span className="text-amber-400">┈ 玩家B-2 (止盈2注)</span>
+              <span className="text-amber-300 font-bold">╍ 玩家B-3 (+4/-8)</span>
               <span className="text-sky-400">━ 玩家C (无止盈)</span>
               <span className="text-cyan-400">╍ 玩家C-1 (止盈3注)</span>
               <span className="text-blue-400">┈ 玩家C-2 (止盈2注)</span>
@@ -999,7 +1057,7 @@ ${csvStr}
               <span className="text-amber-200/90 font-bold">📉 历史全过程最大回撤 (Historical Max Drawdown):</span>
               <span className="text-[10px] text-amber-200/50">* 从历史峰值资金下跌的最大幅度</span>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 font-mono text-[11px]">
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 font-mono text-[11px]">
               <div className="bg-black/50 p-2 rounded border border-amber-500/20 text-center">
                 <span className="text-[#d4af37] block text-[10px] font-sans">玩家A</span>
                 <strong className="text-red-400">¥{histMaxDDA.toLocaleString()}</strong>
@@ -1015,6 +1073,10 @@ ${csvStr}
               <div className="bg-black/50 p-2 rounded border border-yellow-500/20 text-center">
                 <span className="text-amber-400 block text-[10px] font-sans">玩家B-2</span>
                 <strong className="text-red-400">¥{histMaxDDB2.toLocaleString()}</strong>
+              </div>
+              <div className="bg-black/70 p-2 rounded border border-amber-400/40 text-center">
+                <span className="text-amber-300 block text-[10px] font-sans">玩家B-3</span>
+                <strong className="text-red-400">¥{histMaxDDB3.toLocaleString()}</strong>
               </div>
               <div className="bg-black/50 p-2 rounded border border-sky-500/20 text-center">
                 <span className="text-sky-400 block text-[10px] font-sans">玩家C</span>
@@ -1033,7 +1095,7 @@ ${csvStr}
         </div>
       )}
 
-      {/* TAB 3: RECENT 10 HANDS LEDGER */}
+      {/* TAB 4: RECENT 10 HANDS LEDGER */}
       {activeTab === 'details' && (
         <div className="space-y-3 font-sans">
           {recent10Hands.length > 0 ? (
@@ -1041,7 +1103,7 @@ ${csvStr}
               <div className="flex items-center justify-between text-xs mb-2 border-b border-[#b8860b]/20 pb-1.5">
                 <span className="text-amber-200 font-bold">📜 近期对局资金变动明细 (最新10手)</span>
               </div>
-              <table className="w-full text-left text-xs text-amber-100/90 font-mono border-collapse min-w-[850px]">
+              <table className="w-full text-left text-xs text-amber-100/90 font-mono border-collapse min-w-[920px]">
                 <thead>
                   <tr className="border-b border-[#b8860b]/30 text-[10px] text-amber-200/60 font-sans">
                     <th className="py-1 px-1.5">手数</th>
@@ -1050,6 +1112,7 @@ ${csvStr}
                     <th className="py-1 px-1.5">B 盈亏</th>
                     <th className="py-1 px-1.5">B-1 盈亏</th>
                     <th className="py-1 px-1.5">B-2 盈亏</th>
+                    <th className="py-1 px-1.5">B-3 盈亏</th>
                     <th className="py-1 px-1.5">C 盈亏</th>
                     <th className="py-1 px-1.5">C-1 盈亏</th>
                     <th className="py-1 px-1.5">C-2 盈亏</th>
@@ -1058,7 +1121,7 @@ ${csvStr}
                 <tbody>
                   {recent10Hands.map((h) => {
                     const renderBotNet = (betMain: string | null, net: number, stopped?: boolean) => {
-                      if (stopped) return <span className="text-yellow-300 text-[10px]">🎯 止盈停手</span>;
+                      if (stopped) return <span className="text-yellow-300 text-[10px]">🎯 止盈/止损停手</span>;
                       if (!betMain) return <span className="text-amber-200/40 text-[10px]">观望</span>;
                       return (
                         <span className={net >= 0 ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}>
@@ -1086,6 +1149,7 @@ ${csvStr}
                         <td className="py-1 px-1.5">{renderBotNet(h.bBet?.mainBet ?? null, h.bNetProfit)}</td>
                         <td className="py-1 px-1.5">{renderBotNet(h.b1Bet?.mainBet ?? null, h.b1NetProfit ?? 0, h.b1TakeProfitStoppedAfter)}</td>
                         <td className="py-1 px-1.5">{renderBotNet(h.b2Bet?.mainBet ?? null, h.b2NetProfit ?? 0, h.b2TakeProfitStoppedAfter)}</td>
+                        <td className="py-1 px-1.5">{renderBotNet(h.b3Bet?.mainBet ?? null, h.b3NetProfit ?? 0, h.b3TakeProfitStoppedAfter)}</td>
                         <td className="py-1 px-1.5">{renderBotNet(h.cBet?.mainBet ?? null, h.cNetProfit ?? 0)}</td>
                         <td className="py-1 px-1.5">{renderBotNet(h.c1Bet?.mainBet ?? null, h.c1NetProfit ?? 0, h.c1TakeProfitStoppedAfter)}</td>
                         <td className="py-1 px-1.5">{renderBotNet(h.c2Bet?.mainBet ?? null, h.c2NetProfit ?? 0, h.c2TakeProfitStoppedAfter)}</td>
