@@ -106,12 +106,12 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({
 【核心信息】
 - 总鞋数: ${totalShoesCount}靴 | 总手数: ${totalHandsCount}手
 - 玩家A累计盈亏: ¥${runningCumA}
-- 玩家B (无止盈): ¥${runningCumB} | B-1 (止盈3注): ¥${runningCumB1} | B-2 (止盈2注): ¥${runningCumB2} | B-3 (止盈+3/止损-5): ¥${runningCumB3}
+- 玩家B (无止盈): ¥${runningCumB} | B-1 (止盈3注): ¥${runningCumB1} | B-2 (止盈2注): ¥${runningCumB2} | B-3 (止盈4注): ¥${runningCumB3}
 - 玩家C (无止盈): ¥${runningCumC} | C-1 (止盈3注): ¥${runningCumC1} | C-2 (止盈2注): ¥${runningCumC2}
 
 【请帮我分析】
 1. 各玩家（A及追打对家B/B-1/B-2/B-3/C/C-1/C-2）的胜率、期望收益及回撤风险。
-2. 止盈止损机制（B-3的单靴+3止盈与-5止损对比B-1/B-2及无限制）在面对多靴连败/长龙时的风控有效性。
+2. 止盈机制（B-3单靴+4注止盈对比B-1的+3注、B-2的+2注及无止盈）在不同靴次表现与资金留存度。
 3. 给出的追打策略建议。
 
 --- CSV 完整数据 ---
@@ -446,7 +446,7 @@ ${csvStr}
         </div>
 
         <div className="bg-black/75 p-2 rounded-xl border border-amber-400/50">
-          <span className="text-[10px] text-amber-200/90 block font-bold">玩家B-3 (+3/-5)</span>
+          <span className="text-[10px] text-amber-200/90 block font-bold">玩家B-3 (止盈4注)</span>
           <span className={`text-base font-mono font-bold block ${runningCumB3 >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
             {runningCumB3 >= 0 ? `+¥${runningCumB3}` : `-¥${Math.abs(runningCumB3)}`}
           </span>
@@ -579,7 +579,7 @@ ${csvStr}
           <div className="bg-black/70 p-2 rounded-lg border border-amber-400/40">
             <div className="flex items-center justify-between font-bold text-amber-300 text-[11px] mb-1">
               <span>玩家B-3</span>
-              <span className="text-[9px] text-amber-200/70">+3/-5注</span>
+              <span className="text-[9px] text-amber-200/70">止盈4注</span>
             </div>
             <div className="space-y-0.5 text-[10px]">
               <div className="flex justify-between text-amber-200 font-bold">
@@ -728,7 +728,7 @@ ${csvStr}
                     <th className="py-1.5 px-1.5">玩家B</th>
                     <th className="py-1.5 px-1.5">玩家B-1(止盈3注)</th>
                     <th className="py-1.5 px-1.5">玩家B-2(止盈2注)</th>
-                    <th className="py-1.5 px-1.5">玩家B-3(+3/-5)</th>
+                    <th className="py-1.5 px-1.5">玩家B-3(止盈4注)</th>
                     <th className="py-1.5 px-1.5">玩家C</th>
                     <th className="py-1.5 px-1.5">玩家C-1(止盈3注)</th>
                     <th className="py-1.5 px-1.5">玩家C-2(止盈2注)</th>
@@ -796,7 +796,7 @@ ${csvStr}
                 { id: 'B', name: '玩家B (无止盈)', profit: runningCumB, color: '#10b981', bgPos: 'from-emerald-600 to-emerald-400' },
                 { id: 'B-1', name: '玩家B-1 (止盈3注)', profit: runningCumB1, color: '#eab308', bgPos: 'from-yellow-600 to-yellow-400' },
                 { id: 'B-2', name: '玩家B-2 (止盈2注)', profit: runningCumB2, color: '#f59e0b', bgPos: 'from-amber-600 to-amber-400' },
-                { id: 'B-3', name: '玩家B-3 (+3/-5注)', profit: runningCumB3, color: '#fbbf24', bgPos: 'from-amber-500 to-yellow-200' },
+                { id: 'B-3', name: '玩家B-3 (止盈4注)', profit: runningCumB3, color: '#fbbf24', bgPos: 'from-amber-500 to-yellow-200' },
                 { id: 'C', name: '玩家C (无止盈)', profit: runningCumC, color: '#38bdf8', bgPos: 'from-sky-600 to-sky-400' },
                 { id: 'C-1', name: '玩家C-1 (止盈3注)', profit: runningCumC1, color: '#06b6d4', bgPos: 'from-cyan-600 to-cyan-400' },
                 { id: 'C-2', name: '玩家C-2 (止盈2注)', profit: runningCumC2, color: '#0284c7', bgPos: 'from-blue-600 to-blue-400' },
@@ -975,7 +975,7 @@ ${csvStr}
                 { name: '玩家B (无止盈)', winRate: parseFloat(bChaseWinRate), color: '#10b981', label: `${bState.chaseWinsB}胜/${bState.chaseLossesB}负` },
                 { name: '玩家B-1 (止盈3注)', winRate: parseFloat(b1ChaseWinRate), color: '#eab308', label: `${b1State?.chaseWins ?? 0}胜/${b1State?.chaseLosses ?? 0}负` },
                 { name: '玩家B-2 (止盈2注)', winRate: parseFloat(b2ChaseWinRate), color: '#f59e0b', label: `${b2State?.chaseWins ?? 0}胜/${b2State?.chaseLosses ?? 0}负` },
-                { name: '玩家B-3 (+3/-5注)', winRate: parseFloat(b3ChaseWinRate), color: '#fbbf24', label: `${b3State?.chaseWins ?? 0}胜/${b3State?.chaseLosses ?? 0}负` },
+                { name: '玩家B-3 (止盈4注)', winRate: parseFloat(b3ChaseWinRate), color: '#fbbf24', label: `${b3State?.chaseWins ?? 0}胜/${b3State?.chaseLosses ?? 0}负` },
                 { name: '玩家C (无止盈)', winRate: parseFloat(cChaseWinRate), color: '#38bdf8', label: `${cState?.chaseWinsC ?? 0}胜/${cState?.chaseLossesC ?? 0}负` },
                 { name: '玩家C-1 (止盈3注)', winRate: parseFloat(c1ChaseWinRate), color: '#06b6d4', label: `${c1State?.chaseWins ?? 0}胜/${c1State?.chaseLosses ?? 0}负` },
                 { name: '玩家C-2 (止盈2注)', winRate: parseFloat(c2ChaseWinRate), color: '#0284c7', label: `${c2State?.chaseWins ?? 0}胜/${c2State?.chaseLosses ?? 0}负` },
@@ -1044,7 +1044,7 @@ ${csvStr}
               <span className="text-emerald-400">━ 玩家B (无止盈)</span>
               <span className="text-yellow-400">╍ 玩家B-1 (止盈3注)</span>
               <span className="text-amber-400">┈ 玩家B-2 (止盈2注)</span>
-              <span className="text-amber-300 font-bold">╍ 玩家B-3 (+3/-5)</span>
+              <span className="text-amber-300 font-bold">╍ 玩家B-3 (止盈4注)</span>
               <span className="text-sky-400">━ 玩家C (无止盈)</span>
               <span className="text-cyan-400">╍ 玩家C-1 (止盈3注)</span>
               <span className="text-blue-400">┈ 玩家C-2 (止盈2注)</span>

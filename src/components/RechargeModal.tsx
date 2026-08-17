@@ -35,7 +35,7 @@ export const RechargeModal: React.FC<RechargeModalProps> = ({
       case 'B': return '玩家B (无止盈)';
       case 'B-1': return '玩家B-1 (止盈3注)';
       case 'B-2': return '玩家B-2 (止盈2注)';
-      case 'B-3': return '玩家B-3 (止盈+3/止损-5)';
+      case 'B-3': return '玩家B-3 (止盈4注)';
       case 'C': return '玩家C (无止盈)';
       case 'C-1': return '玩家C-1 (止盈3注)';
       case 'C-2': return '玩家C-2 (止盈2注)';

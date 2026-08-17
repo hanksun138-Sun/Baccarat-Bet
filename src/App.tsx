@@ -201,14 +201,14 @@ export default function App() {
           let runningB3DD = 0;
           let runningB3State: PlayerBotState = { ...defaultBotState };
 
-          // Backfill shoeHistory for B-3 (clamp each shoe profit by +3 units [+600] and -5 units [-1000])
+          // Backfill shoeHistory for B-3 (clamp each shoe profit by +4 units [+800], no stop loss)
           loadedShoes = loadedShoes.map((s) => {
             if (s.b3Profit !== undefined && s.b3BankrollEnd !== undefined) {
               runningB3Bankroll = s.b3BankrollEnd;
               return s;
             }
-            // Derive B-3 profit from shoe's B profit clamped to +3 units (+600) and -5 units (-1000)
-            const b3ShoeNet = Math.min(600, Math.max(-1000, s.bProfit));
+            // Derive B-3 profit from shoe's B profit clamped to +4 units (+800)
+            const b3ShoeNet = Math.min(800, s.bProfit);
             runningB3Bankroll = Math.max(0, runningB3Bankroll + b3ShoeNet);
             runningB3Max = Math.max(runningB3Max, runningB3Bankroll);
             runningB3DD = Math.max(runningB3DD, runningB3Max - runningB3Bankroll);
@@ -257,7 +257,7 @@ export default function App() {
               runningB3Bankroll = Math.max(0, runningB3Bankroll + netProfit);
 
               if (!currentShoeStopped) {
-                if (currentShoeB3Profit >= 600 || currentShoeB3Profit <= -1000) {
+                if (currentShoeB3Profit >= 800) {
                   currentShoeStopped = true;
                 }
               }
@@ -914,15 +914,14 @@ export default function App() {
       winner,
     });
 
-    // 5. Process Bot B-3 (3 wins exit, +3 units take profit, -5 units stop loss)
+    // 5. Process Bot B-3 (3 wins exit, +4 units take profit, no stop loss)
     const b3ChaseBetAmt = aIsExhausted ? (settings.b3PostExhaustionChaseBet ?? 200) : (settings.b3ChaseBet ?? 200);
     const b3Res = processBotHand({
       currentState: b3State,
       currentBankroll: b3Bankroll,
       chaseBetAmount: b3ChaseBetAmt,
       maxWinsToExit: 3,
-      takeProfitUnits: 3,
-      stopLossUnits: 5,
+      takeProfitUnits: 4,
       aMainResult,
       aBetMainBet: aBet.mainBet,
       winner,

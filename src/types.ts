@@ -75,7 +75,7 @@ export interface HandResult {
   b2CumulativeProfit?: number;
   b2BankrollAfter?: number;
 
-  // Player B-3 outcome (Take Profit +3 units, Stop Loss -5 units)
+  // Player B-3 outcome (Take Profit +4 units, no stop loss)
   b3Bet?: PlayerBBet;
   b3WasChasing?: boolean;
   b3MainResult?: 'WIN' | 'LOSS' | 'PUSH' | 'NO_BET';
