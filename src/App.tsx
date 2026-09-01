@@ -30,6 +30,7 @@ import {
   stringToSeed,
 } from './utils/baccarat';
 import { downloadStandaloneHtmlFile } from './utils/exportSingleFileHtml';
+import { recalculateFullHistory } from './utils/recalculateHistory';
 
 const LOCAL_STORAGE_KEY = 'baccarat_session_v2';
 
@@ -1255,19 +1256,137 @@ export default function App() {
     else if (player === 'C-2') setC2Bankroll((prev) => prev + amount);
   };
 
-  const handleChangeBotBetAmount = (player: 'B' | 'B1' | 'B2' | 'B3' | 'C' | 'C1' | 'C2', amt: number) => {
-    setSettings((prev) => {
-      switch (player) {
-        case 'B': return { ...prev, bChaseBet: amt };
-        case 'B1': return { ...prev, b1ChaseBet: amt };
-        case 'B2': return { ...prev, b2ChaseBet: amt };
-        case 'B3': return { ...prev, b3ChaseBet: amt };
-        case 'C': return { ...prev, cChaseBet: amt };
-        case 'C1': return { ...prev, c1ChaseBet: amt };
-        case 'C2': return { ...prev, c2ChaseBet: amt };
-        default: return prev;
+  const handleSaveSettings = (newSettings: GameSettings) => {
+    setSettings(newSettings);
+
+    // If historical shoes or current hand results exist, dynamically recalculate all data
+    if (shoeHistory.length > 0 || handResults.length > 0) {
+      const result = recalculateFullHistory({
+        shoeHistory,
+        currentHandResults: handResults,
+        allHandResults,
+        settings: newSettings,
+        initialBankrolls: {
+          a: 1000,
+          b: 10000,
+          b1: 10000,
+          b2: 10000,
+          b3: 10000,
+          c: 10000,
+          c1: 10000,
+          c2: 10000,
+        },
+      });
+
+      setShoeHistory(result.updatedShoeHistory);
+      setHandResults(result.updatedHandResults);
+      setAllHandResults(result.updatedAllHandResults);
+
+      setBBankroll(result.bankrolls.bBankroll);
+      setB1Bankroll(result.bankrolls.b1Bankroll);
+      setB2Bankroll(result.bankrolls.b2Bankroll);
+      setB3Bankroll(result.bankrolls.b3Bankroll);
+      setCBankroll(result.bankrolls.cBankroll);
+      setC1Bankroll(result.bankrolls.c1Bankroll);
+      setC2Bankroll(result.bankrolls.c2Bankroll);
+
+      setBState(result.botStates.bState);
+      setB1State(result.botStates.b1State);
+      setB2State(result.botStates.b2State);
+      setB3State(result.botStates.b3State);
+      setCState(result.botStates.cState);
+      setC1State(result.botStates.c1State);
+      setC2State(result.botStates.c2State);
+
+      setTrendPoints(result.trendPoints);
+      setStats((prev) => ({
+        ...prev,
+        bMaxBankroll: result.stats.bMaxBankroll,
+        bMaxDrawdown: result.stats.bMaxDrawdown,
+        b1MaxBankroll: result.stats.b1MaxBankroll,
+        b1MaxDrawdown: result.stats.b1MaxDrawdown,
+        b2MaxBankroll: result.stats.b2MaxBankroll,
+        b2MaxDrawdown: result.stats.b2MaxDrawdown,
+        b3MaxBankroll: result.stats.b3MaxBankroll,
+        b3MaxDrawdown: result.stats.b3MaxDrawdown,
+        cMaxBankroll: result.stats.cMaxBankroll,
+        cMaxDrawdown: result.stats.cMaxDrawdown,
+        c1MaxBankroll: result.stats.c1MaxBankroll,
+        c1MaxDrawdown: result.stats.c1MaxDrawdown,
+        c2MaxBankroll: result.stats.c2MaxBankroll,
+        c2MaxDrawdown: result.stats.c2MaxDrawdown,
+      }));
+
+      // Immediate localStorage synchronization
+      try {
+        const stateToSave = {
+          aBankroll,
+          bBankroll: result.bankrolls.bBankroll,
+          b1Bankroll: result.bankrolls.b1Bankroll,
+          b2Bankroll: result.bankrolls.b2Bankroll,
+          b3Bankroll: result.bankrolls.b3Bankroll,
+          cBankroll: result.bankrolls.cBankroll,
+          c1Bankroll: result.bankrolls.c1Bankroll,
+          c2Bankroll: result.bankrolls.c2Bankroll,
+          bState: result.botStates.bState,
+          b1State: result.botStates.b1State,
+          b2State: result.botStates.b2State,
+          b3State: result.botStates.b3State,
+          cState: result.botStates.cState,
+          c1State: result.botStates.c1State,
+          c2State: result.botStates.c2State,
+          stats: {
+            ...stats,
+            bMaxBankroll: result.stats.bMaxBankroll,
+            bMaxDrawdown: result.stats.bMaxDrawdown,
+            b1MaxBankroll: result.stats.b1MaxBankroll,
+            b1MaxDrawdown: result.stats.b1MaxDrawdown,
+            b2MaxBankroll: result.stats.b2MaxBankroll,
+            b2MaxDrawdown: result.stats.b2MaxDrawdown,
+            b3MaxBankroll: result.stats.b3MaxBankroll,
+            b3MaxDrawdown: result.stats.b3MaxDrawdown,
+            cMaxBankroll: result.stats.cMaxBankroll,
+            cMaxDrawdown: result.stats.cMaxDrawdown,
+            c1MaxBankroll: result.stats.c1MaxBankroll,
+            c1MaxDrawdown: result.stats.c1MaxDrawdown,
+            c2MaxBankroll: result.stats.c2MaxBankroll,
+            c2MaxDrawdown: result.stats.c2MaxDrawdown,
+          },
+          d7Stats,
+          trendPoints: result.trendPoints,
+          settings: newSettings,
+          handResults: result.updatedHandResults,
+          allHandResults: result.updatedAllHandResults.slice(-300),
+          shoeHistory: result.updatedShoeHistory.slice(-5000),
+          totalHandCount,
+        };
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(stateToSave));
+      } catch (e) {
+        console.warn('LocalStorage save failed:', e);
       }
+    }
+  };
+
+  const handleToggleResetMode = () => {
+    const nextMode = settings.botTakeProfitResetMode === 'CUMULATIVE' ? 'ISOLATED_SHOE' : 'CUMULATIVE';
+    handleSaveSettings({
+      ...settings,
+      botTakeProfitResetMode: nextMode,
     });
+  };
+
+  const handleChangeBotBetAmount = (player: 'B' | 'B1' | 'B2' | 'B3' | 'C' | 'C1' | 'C2', amt: number) => {
+    let updated = { ...settings };
+    switch (player) {
+      case 'B': updated = { ...updated, bChaseBet: amt }; break;
+      case 'B1': updated = { ...updated, b1ChaseBet: amt }; break;
+      case 'B2': updated = { ...updated, b2ChaseBet: amt }; break;
+      case 'B3': updated = { ...updated, b3ChaseBet: amt }; break;
+      case 'C': updated = { ...updated, cChaseBet: amt }; break;
+      case 'C1': updated = { ...updated, c1ChaseBet: amt }; break;
+      case 'C2': updated = { ...updated, c2ChaseBet: amt }; break;
+    }
+    handleSaveSettings(updated);
   };
 
   const lastHandResult = handResults.length > 0 ? handResults[handResults.length - 1] : null;
@@ -1294,7 +1413,22 @@ export default function App() {
             </span>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-4 text-xs font-sans">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs font-sans">
+            {/* Quick Reset Mode Switcher */}
+            <button
+              type="button"
+              onClick={handleToggleResetMode}
+              className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-all shadow-md active:scale-95 cursor-pointer flex items-center gap-1.5 border ${
+                settings.botTakeProfitResetMode === 'CUMULATIVE'
+                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/60 hover:bg-amber-500/30 shadow-[0_0_10px_rgba(245,158,11,0.2)]'
+                  : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/60 hover:bg-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.2)]'
+              }`}
+              title="点击直接切换止盈重置模式：单靴独立重置 vs 跨靴累计追亏"
+            >
+              <span className={settings.botTakeProfitResetMode === 'CUMULATIVE' ? 'text-amber-400' : 'text-emerald-400'}>●</span>
+              <span>{settings.botTakeProfitResetMode === 'CUMULATIVE' ? '跨靴累计追亏 (点击切换)' : '单靴独立重置 (点击切换)'}</span>
+            </button>
+
             <div className="flex items-center gap-1.5 bg-black/50 px-2.5 py-1.5 rounded-lg border border-emerald-500/30">
               <span className="text-emerald-400/80 font-serif italic text-[11px]">玩家A:</span>
               <span className="text-emerald-400 font-bold font-mono text-sm">¥{aBankroll.toLocaleString()}</span>
@@ -1385,6 +1519,8 @@ export default function App() {
             c2ChaseBetAmount={aBankroll === 0 ? (settings.c2PostExhaustionChaseBet ?? 200) : (settings.c2ChaseBet ?? 200)}
 
             aIsExhausted={aBankroll === 0}
+            botTakeProfitResetMode={settings.botTakeProfitResetMode}
+            onToggleResetMode={handleToggleResetMode}
             onOpenRecharge={setRechargePlayer}
             onChangeBetAmount={handleChangeBotBetAmount}
           />
@@ -1412,6 +1548,8 @@ export default function App() {
             cBankroll={cBankroll}
             c1Bankroll={c1Bankroll}
             c2Bankroll={c2Bankroll}
+            botTakeProfitResetMode={settings.botTakeProfitResetMode}
+            onToggleResetMode={handleToggleResetMode}
             onResetSession={handleResetSession}
           />
         </div>
@@ -1422,7 +1560,7 @@ export default function App() {
         isOpen={isSettingsOpen}
         settings={settings}
         onClose={() => setIsSettingsOpen(false)}
-        onSave={setSettings}
+        onSave={handleSaveSettings}
         onExportSingleFileHTML={downloadStandaloneHtmlFile}
         onResetSession={handleResetSession}
       />

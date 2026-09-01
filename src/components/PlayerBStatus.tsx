@@ -52,6 +52,8 @@ interface PlayerBStatusProps {
   c2ChaseBetAmount?: number;
 
   aIsExhausted: boolean;
+  botTakeProfitResetMode?: 'ISOLATED_SHOE' | 'CUMULATIVE';
+  onToggleResetMode?: () => void;
   onOpenRecharge: (player: RechargePlayer) => void;
   onChangeBetAmount: (player: 'B' | 'B1' | 'B2' | 'B3' | 'C' | 'C1' | 'C2', amt: number) => void;
 }
@@ -93,6 +95,8 @@ export const PlayerBStatus: React.FC<PlayerBStatusProps> = ({
   c2ChaseBetAmount = 200,
 
   aIsExhausted,
+  botTakeProfitResetMode = 'ISOLATED_SHOE',
+  onToggleResetMode,
   onOpenRecharge,
   onChangeBetAmount,
 }) => {
@@ -198,9 +202,24 @@ export const PlayerBStatus: React.FC<PlayerBStatusProps> = ({
   return (
     <div className="space-y-4">
       {/* Category Filter Selector */}
-      <div className="flex items-center justify-between bg-[#051a0b]/90 border border-[#b8860b]/40 rounded-xl p-2 px-3 shadow-lg font-sans">
+      <div className="flex flex-wrap items-center justify-between bg-[#051a0b]/90 border border-[#b8860b]/40 rounded-xl p-2 px-3 shadow-lg font-sans gap-2">
         <div className="flex items-center space-x-2">
           <span className="text-sm font-bold text-[#d4af37]">🤖 追打对家监控面板 (7位对家)</span>
+          {onToggleResetMode && (
+            <button
+              type="button"
+              onClick={onToggleResetMode}
+              className={`px-2 py-0.5 rounded text-[10px] font-bold border transition-all cursor-pointer flex items-center gap-1 ${
+                botTakeProfitResetMode === 'CUMULATIVE'
+                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 hover:bg-amber-500/30'
+                  : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50 hover:bg-emerald-500/30'
+              }`}
+              title="点击切换止盈重置模式"
+            >
+              <span className={botTakeProfitResetMode === 'CUMULATIVE' ? 'text-amber-400' : 'text-emerald-400'}>●</span>
+              <span>{botTakeProfitResetMode === 'CUMULATIVE' ? '跨靴累计追亏 (模式)' : '单靴独立重置 (模式)'}</span>
+            </button>
+          )}
         </div>
         <div className="flex space-x-1.5 text-xs font-bold">
           <button

@@ -24,6 +24,8 @@ interface StatsPanelProps {
   cBankroll: number;
   c1Bankroll?: number;
   c2Bankroll?: number;
+  botTakeProfitResetMode?: 'ISOLATED_SHOE' | 'CUMULATIVE';
+  onToggleResetMode?: () => void;
   onResetSession?: () => void;
 }
 
@@ -49,6 +51,8 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({
   cBankroll,
   c1Bankroll = 10000,
   c2Bankroll = 10000,
+  botTakeProfitResetMode = 'ISOLATED_SHOE',
+  onToggleResetMode,
   onResetSession,
 }) => {
   const [activeTab, setActiveTab] = useState<'shoes' | 'barchart' | 'curve' | 'details'>('shoes');
@@ -709,8 +713,23 @@ ${csvStr}
       {activeTab === 'shoes' && (
         <div className="space-y-3 font-sans">
           <div className="bg-black/75 p-3 rounded-xl border border-[#b8860b]/30 overflow-x-auto">
-            <div className="flex items-center justify-between text-xs mb-2 border-b border-[#b8860b]/20 pb-1.5">
-              <span className="text-amber-200 font-bold">🥿 每一鞋/靴盈亏与胜负明细 (A vs B, B-1, B-2 vs C, C-1, C-2)</span>
+            <div className="flex flex-wrap items-center justify-between text-xs mb-2 border-b border-[#b8860b]/20 pb-1.5 gap-2">
+              <span className="text-amber-200 font-bold">🥿 每一靴盈亏与胜负明细 (A vs B/B-1/B-2/B-3 vs C/C-1/C-2)</span>
+              {onToggleResetMode && (
+                <button
+                  type="button"
+                  onClick={onToggleResetMode}
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold border transition-all cursor-pointer flex items-center gap-1 ${
+                    botTakeProfitResetMode === 'CUMULATIVE'
+                      ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 hover:bg-amber-500/30'
+                      : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50 hover:bg-emerald-500/30'
+                  }`}
+                  title="点击切换止盈重置模式 (单靴独立重置 / 跨靴累计追亏)"
+                >
+                  <span className={botTakeProfitResetMode === 'CUMULATIVE' ? 'text-amber-400' : 'text-emerald-400'}>●</span>
+                  <span>计算模式: {botTakeProfitResetMode === 'CUMULATIVE' ? '跨靴累计追亏 (点击切换)' : '单靴独立重置 (点击切换)'}</span>
+                </button>
+              )}
             </div>
 
             {processedShoes.length === 0 ? (
