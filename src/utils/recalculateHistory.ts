@@ -1,5 +1,4 @@
 import {
-  Card,
   GameSettings,
   GameStats,
   HandResult,
@@ -10,14 +9,6 @@ import {
   ShoeRecord,
   TrendPoint,
 } from '../types';
-import {
-  calculateHandScore,
-  createEightDecks,
-  dealHand,
-  mulberry32,
-  shuffleDeck,
-  stringToSeed,
-} from './baccarat';
 
 export interface RecalculationParams {
   shoeHistory: ShoeRecord[];
@@ -385,138 +376,65 @@ export function recalculateFullHistory(params: RecalculationParams): Recalculati
       resetBotsForNewShoe();
     }
 
-    let shoeNetB = 0;
-    let shoeNetB1 = 0;
-    let shoeNetB2 = 0;
-    let shoeNetB3 = 0;
-    let shoeNetC = 0;
-    let shoeNetC1 = 0;
-    let shoeNetC2 = 0;
+    // Authentic shoe profits for B and C (who have no take-profit / 不止盈)
+    const shoeNetB = s.bProfit;
+    const shoeNetC = s.cProfit;
 
-    let simulatedHands: { winner: 'PLAYER' | 'BANKER' | 'TIE'; aMainResult: 'WIN' | 'LOSS' | 'PUSH' }[] = [];
+    const calcBotShoeNet = (
+      botKey: string,
+      units: number,
+      recordedProfit: number | undefined,
+      parentProfit: number
+    ) => {
+      const bot = bots[botKey];
+      const target = units * bot.betAmount;
 
-    if (s.seed && s.totalHands > 0) {
-      try {
-        const seedNum = stringToSeed(s.seed);
-        const prng = mulberry32(seedNum);
-        const freshDecks = createEightDecks();
-        const shuffled = shuffleDeck(freshDecks, prng);
-
-        // Burn cards
-        const topCard = shuffled.pop();
-        if (topCard) {
-          const burnValue = topCard.burnValue;
-          for (let i = 0; i < burnValue; i++) {
-            if (shuffled.length > 0) shuffled.pop();
-          }
-        }
-
-        let currentDeck = shuffled;
-        for (let h = 0; h < s.totalHands; h++) {
-          if (currentDeck.length < 4) break;
-          const res = dealHand(currentDeck);
-          currentDeck = res.remainingShoe;
-          const pScore = calculateHandScore(res.playerCards);
-          const bScore = calculateHandScore(res.bankerCards);
-          const winner: 'PLAYER' | 'BANKER' | 'TIE' =
-            pScore > bScore ? 'PLAYER' : bScore > pScore ? 'BANKER' : 'TIE';
-
-          // Winner sequence determines A's outcome
-          const aMainResult: 'WIN' | 'LOSS' | 'PUSH' =
-            winner === 'TIE' ? 'PUSH' : winner === 'BANKER' ? 'WIN' : 'LOSS';
-
-          simulatedHands.push({ winner, aMainResult });
-        }
-      } catch (err) {
-        console.warn(`Simulation failed for shoe #${s.shoeNumber}, using recorded values:`, err);
-        simulatedHands = [];
-      }
-    }
-
-    if (simulatedHands.length > 0) {
-      for (const hand of simulatedHands) {
-        globalHandIndex += 1;
-        const res = stepBotsForHand(hand.winner, hand.aMainResult);
-        shoeNetB += res.B.netProfit;
-        shoeNetB1 += res.B1.netProfit;
-        shoeNetB2 += res.B2.netProfit;
-        shoeNetB3 += res.B3.netProfit;
-        shoeNetC += res.C.netProfit;
-        shoeNetC1 += res.C1.netProfit;
-        shoeNetC2 += res.C2.netProfit;
-
-        updateStatsForHand();
-
-        if (globalHandIndex % 5 === 0 || globalHandIndex === s.totalHands) {
-          trendPoints.push({
-            handNumber: globalHandIndex,
-            aCum: (s.aBankrollEnd || initA) - initA,
-            bCum: bots.B.bankroll - initB,
-            b1Cum: bots.B1.bankroll - initB1,
-            b2Cum: bots.B2.bankroll - initB2,
-            b3Cum: bots.B3.bankroll - initB3,
-            cCum: bots.C.bankroll - initC,
-            c1Cum: bots.C1.bankroll - initC1,
-            c2Cum: bots.C2.bankroll - initC2,
-          });
-        }
-      }
-    } else {
-      // Fallback: If simulation could not run, calculate shoe profits based on mode & s.bProfit / s.cProfit
-      shoeNetB = s.bProfit;
-      shoeNetC = s.cProfit;
-
-      const calcBotShoeNet = (botKey: string, units: number, shoeRawProfit: number) => {
-        const bot = bots[botKey];
-        const target = units * bot.betAmount;
-
-        if (isIsolated) {
-          // In isolated mode, shoe profit is capped at target profit
-          const profit = shoeRawProfit >= target ? target : shoeRawProfit;
+      if (isIsolated) {
+        // In isolated shoe mode, use recorded profit if available, or clamp parent raw profit to target
+        const profit = recordedProfit !== undefined ? recordedProfit : (parentProfit >= target ? target : parentProfit);
+        bot.profitSinceReset = 0;
+        bot.bankroll = Math.max(0, bot.bankroll + profit);
+        return profit;
+      } else {
+        // In cumulative mode, check cumulative recovery progress against target
+        const required = target - bot.profitSinceReset;
+        if (parentProfit >= required) {
+          const profit = required;
           bot.profitSinceReset = 0;
           bot.bankroll = Math.max(0, bot.bankroll + profit);
           return profit;
         } else {
-          // In cumulative mode, check cumulative progress
-          const required = target - bot.profitSinceReset;
-          if (shoeRawProfit >= required) {
-            const profit = required;
-            bot.profitSinceReset = 0;
-            bot.bankroll = Math.max(0, bot.bankroll + profit);
-            return profit;
-          } else {
-            const profit = shoeRawProfit;
-            bot.profitSinceReset += profit;
-            bot.bankroll = Math.max(0, bot.bankroll + profit);
-            return profit;
-          }
+          const profit = parentProfit;
+          bot.profitSinceReset += profit;
+          bot.bankroll = Math.max(0, bot.bankroll + profit);
+          return profit;
         }
-      };
+      }
+    };
 
-      shoeNetB1 = calcBotShoeNet('B1', 3, s.bProfit);
-      shoeNetB2 = calcBotShoeNet('B2', 2, s.bProfit);
-      shoeNetB3 = calcBotShoeNet('B3', 4, s.bProfit);
-      shoeNetC1 = calcBotShoeNet('C1', 3, s.cProfit);
-      shoeNetC2 = calcBotShoeNet('C2', 2, s.cProfit);
+    const shoeNetB1 = calcBotShoeNet('B1', 3, isIsolated ? s.b1Profit : undefined, s.bProfit);
+    const shoeNetB2 = calcBotShoeNet('B2', 2, isIsolated ? s.b2Profit : undefined, s.bProfit);
+    const shoeNetB3 = calcBotShoeNet('B3', 4, isIsolated ? s.b3Profit : undefined, s.bProfit);
+    const shoeNetC1 = calcBotShoeNet('C1', 3, isIsolated ? s.c1Profit : undefined, s.cProfit);
+    const shoeNetC2 = calcBotShoeNet('C2', 2, isIsolated ? s.c2Profit : undefined, s.cProfit);
 
-      bots.B.bankroll = Math.max(0, bots.B.bankroll + shoeNetB);
-      bots.C.bankroll = Math.max(0, bots.C.bankroll + shoeNetC);
+    bots.B.bankroll = Math.max(0, bots.B.bankroll + shoeNetB);
+    bots.C.bankroll = Math.max(0, bots.C.bankroll + shoeNetC);
 
-      globalHandIndex += s.totalHands;
-      updateStatsForHand();
+    globalHandIndex += s.totalHands || 1;
+    updateStatsForHand();
 
-      trendPoints.push({
-        handNumber: globalHandIndex,
-        aCum: (s.aBankrollEnd || initA) - initA,
-        bCum: bots.B.bankroll - initB,
-        b1Cum: bots.B1.bankroll - initB1,
-        b2Cum: bots.B2.bankroll - initB2,
-        b3Cum: bots.B3.bankroll - initB3,
-        cCum: bots.C.bankroll - initC,
-        c1Cum: bots.C1.bankroll - initC1,
-        c2Cum: bots.C2.bankroll - initC2,
-      });
-    }
+    trendPoints.push({
+      handNumber: globalHandIndex,
+      aCum: (s.aBankrollEnd || initA) - initA,
+      bCum: bots.B.bankroll - initB,
+      b1Cum: bots.B1.bankroll - initB1,
+      b2Cum: bots.B2.bankroll - initB2,
+      b3Cum: bots.B3.bankroll - initB3,
+      cCum: bots.C.bankroll - initC,
+      c1Cum: bots.C1.bankroll - initC1,
+      c2Cum: bots.C2.bankroll - initC2,
+    });
 
     runningBankrollA = s.aBankrollEnd ?? runningBankrollA;
 
