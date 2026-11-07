@@ -8,6 +8,9 @@ import { RechargeModal, RechargePlayer } from './components/RechargeModal';
 import {
   Card,
   D7Stats,
+  Dragon7BetRecord,
+  Dragon7Settings,
+  defaultDragon7Settings,
   GameSettings,
   GameStats,
   HandResult,
@@ -28,6 +31,12 @@ import {
   shuffleDeck,
   stringToSeed,
 } from './utils/baccarat';
+import {
+  calculateDragon7Advantage,
+  calculateDragon7RunningCount,
+  calculateDragon7TrueCount,
+  formatCardsCompact,
+} from './utils/dragon7';
 import { downloadStandaloneHtmlFile } from './utils/exportSingleFileHtml';
 import { recalculateFullHistory } from './utils/recalculateHistory';
 
@@ -129,6 +138,11 @@ export default function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [rechargePlayer, setRechargePlayer] = useState<RechargePlayer | null>(null);
 
+  // Dragon 7 Card Counting Assistant State
+  const [d7Settings, setD7Settings] = useState<Dragon7Settings>(defaultDragon7Settings);
+  const [d7History, setD7History] = useState<Dragon7BetRecord[]>([]);
+  const [d7Bankroll, setD7Bankroll] = useState<number>(10000);
+
   // Initialize or Load from LocalStorage
   useEffect(() => {
     const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -183,6 +197,10 @@ export default function App() {
           setD7Stats(reconstructedD7);
         }
 
+        if (parsed.d7Settings) setD7Settings(parsed.d7Settings);
+        if (parsed.d7History) setD7History(parsed.d7History);
+        if (parsed.d7Bankroll !== undefined) setD7Bankroll(parsed.d7Bankroll);
+
         if (parsed.trendPoints) {
           setTrendPoints(parsed.trendPoints);
         } else if (handsForInit.length > 0) {
@@ -225,6 +243,9 @@ export default function App() {
           allHandResults: allHandResults.slice(-300),
           shoeHistory: shoeHistory.slice(-5000),
           totalHandCount,
+          d7Settings,
+          d7History: d7History.slice(-500),
+          d7Bankroll,
         };
 
         try {
@@ -252,6 +273,35 @@ export default function App() {
     allHandResults,
     shoeHistory,
     totalHandCount,
+    d7Settings,
+    d7History,
+    d7Bankroll,
+  ]);
+
+  // Synchronize Dragon 7 auto-bet when auto-bet is enabled and system is idle
+  useEffect(() => {
+    if (d7Settings.isAutoBetEnabled && !isDealing && shoe.length > 0) {
+      const rc = calculateDragon7RunningCount(handResults, burnCard, d7Settings.countingSystem);
+      const tc = calculateDragon7TrueCount(rc.rc, shoe.length, 416);
+      const adv = calculateDragon7Advantage(
+        tc.tc,
+        d7Settings.threshold,
+        d7Settings.betMode,
+        d7Settings.fixedUnitAmount,
+        d7Bankroll
+      );
+      const targetBet = adv.shouldBet ? adv.suggestedBet : 0;
+      setABet((prev) => (prev.dragon7Amount !== targetBet ? { ...prev, dragon7Amount: targetBet } : prev));
+    }
+  }, [
+    d7Settings.isAutoBetEnabled,
+    d7Settings.threshold,
+    d7Settings.betMode,
+    d7Settings.fixedUnitAmount,
+    d7Bankroll,
+    handResults.length,
+    shoe.length,
+    isDealing,
   ]);
 
   // Initialize a new shoe (Shuffle + Burn)
@@ -573,6 +623,23 @@ export default function App() {
 
     const aIsExhausted = aBankroll === 0;
 
+    // Current Dragon 7 Count & Advice before deal
+    const currentRCDetails = calculateDragon7RunningCount(handResults, burnCard, d7Settings.countingSystem);
+    const currentTCDetails = calculateDragon7TrueCount(currentRCDetails.rc, shoe.length, 416);
+    const currentD7Advice = calculateDragon7Advantage(
+      currentTCDetails.tc,
+      d7Settings.threshold,
+      d7Settings.betMode,
+      d7Settings.fixedUnitAmount,
+      d7Bankroll
+    );
+
+    // Determine actual Dragon 7 bet amount (supports auto-bet when threshold is reached)
+    let effectiveD7Bet = aBet.dragon7Amount;
+    if (d7Settings.isAutoBetEnabled) {
+      effectiveD7Bet = currentD7Advice.shouldBet ? currentD7Advice.suggestedBet : 0;
+    }
+
     // Deal Cards from Shoe
     const { playerCards: pCards, bankerCards: bCards, remainingShoe } = dealHand(shoe);
     setShoe(remainingShoe);
@@ -614,10 +681,10 @@ export default function App() {
       }
     }
 
-    // Side Bets Payout
+    // Side Bets Payout (with effective Dragon 7 bet)
     let aSidePayout = 0;
-    if (aBet.dragon7Amount > 0) {
-      aSidePayout += isDragon7 ? aBet.dragon7Amount * 40 : -aBet.dragon7Amount;
+    if (effectiveD7Bet > 0) {
+      aSidePayout += isDragon7 ? effectiveD7Bet * 40 : -effectiveD7Bet;
     }
     if (aBet.panda8Amount > 0) {
       aSidePayout += isPanda8 ? aBet.panda8Amount * 25 : -aBet.panda8Amount;
@@ -687,7 +754,7 @@ export default function App() {
       isPanda8,
       isDragon7Push,
 
-      aBet: { ...aBet },
+      aBet: { ...aBet, dragon7Amount: effectiveD7Bet },
       aMainResult,
       aMainPayout,
       aSidePayout,
@@ -722,6 +789,46 @@ export default function App() {
       timestamp: Date.now(),
     };
 
+    // Record Dragon 7 Bet Tracking Record
+    if (effectiveD7Bet > 0) {
+      const d7Net = isDragon7 ? effectiveD7Bet * 40 : -effectiveD7Bet;
+      const newD7Bankroll = Math.max(0, d7Bankroll + d7Net);
+      setD7Bankroll(newD7Bankroll);
+
+      const prevShoeProfit = handResults.reduce((sum, h) => {
+        if (h.aBet.dragon7Amount > 0) {
+          return sum + (h.isDragon7 ? h.aBet.dragon7Amount * 40 : -h.aBet.dragon7Amount);
+        }
+        return sum;
+      }, 0);
+      const shoeProfitAfter = prevShoeProfit + d7Net;
+
+      const prevCum = d7History.length > 0 ? d7History[d7History.length - 1].cumulativeProfitAfter : 0;
+      const cumulativeProfitAfter = prevCum + d7Net;
+
+      const d7Record: Dragon7BetRecord = {
+        id: `d7_${newHandNum}_${Date.now()}`,
+        handNumber: newHandNum,
+        shoeNumber: shoeHistory.length + 1,
+        shoeHandNumber: newShoeHandNum,
+        rc: currentRCDetails.rc,
+        tc: currentTCDetails.tc,
+        betAmount: effectiveD7Bet,
+        isWin: isDragon7,
+        payout: isDragon7 ? effectiveD7Bet * 40 : 0,
+        netProfit: d7Net,
+        shoeProfitAfter,
+        cumulativeProfitAfter,
+        bankrollAfter: newD7Bankroll,
+        bankerCardsStr: formatCardsCompact(bCards),
+        playerCardsStr: formatCardsCompact(pCards),
+        isDragon7,
+        timestamp: Date.now(),
+      };
+
+      setD7History((prev) => [...prev, d7Record]);
+    }
+
     // Update States
     setPlayerCards(pCards);
     setBankerCards(bCards);
@@ -730,10 +837,21 @@ export default function App() {
     setB1Bankroll(b1Res.bankrollAfter);
     setB2Bankroll(b2Res.bankrollAfter);
 
+    // Calculate Next Hand's count and advice for Auto Bet
+    const nextRCDetails = calculateDragon7RunningCount([...handResults, handRes], burnCard, d7Settings.countingSystem);
+    const nextTCDetails = calculateDragon7TrueCount(nextRCDetails.rc, remainingShoe.length, 416);
+    const nextD7Advice = calculateDragon7Advantage(
+      nextTCDetails.tc,
+      d7Settings.threshold,
+      d7Settings.betMode,
+      d7Settings.fixedUnitAmount,
+      d7Bankroll
+    );
+
     setABet({
       mainBet: null,
       mainAmount: settings.aDefaultBet,
-      dragon7Amount: 0,
+      dragon7Amount: d7Settings.isAutoBetEnabled && nextD7Advice.shouldBet ? nextD7Advice.suggestedBet : 0,
       panda8Amount: 0,
     });
 
@@ -1043,9 +1161,23 @@ export default function App() {
               />
             </div>
 
-            {/* Right ~40%: Road Maps */}
+            {/* Right ~40%: Big Road & Dragon 7 Card Counting Assistant */}
             <div className="lg:col-span-2">
-              <BigRoad handResults={handResults} />
+              <BigRoad
+                handResults={handResults}
+                burnCard={burnCard}
+                burnedCount={burnedCount}
+                remainingCards={shoe.length}
+                currentD7Bet={aBet.dragon7Amount}
+                isDealing={isDealing}
+                d7Settings={d7Settings}
+                d7History={d7History}
+                d7Bankroll={d7Bankroll}
+                onUpdateSettings={setD7Settings}
+                onSetD7Bet={(amt) => setABet((prev) => ({ ...prev, dragon7Amount: amt }))}
+                onUpdateBankroll={setD7Bankroll}
+                onClearHistory={() => setD7History([])}
+              />
             </div>
           </div>
 

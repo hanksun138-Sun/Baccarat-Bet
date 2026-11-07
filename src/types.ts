@@ -219,3 +219,56 @@ export const initialD7Stats: D7Stats = {
   b2D7NoBets: 0,
 };
 
+// ==================== Dragon 7 (龙7) 算牌辅助系统类型 ====================
+export type Dragon7CountingSystem = 'STANDARD' | 'SIMPLE';
+export type Dragon7BetMode = 'FIXED' | 'HALF_KELLY' | 'FULL_KELLY';
+
+export interface Dragon7Settings {
+  threshold: number; // 默认 +4.0
+  betMode: Dragon7BetMode; // 'FIXED' | 'HALF_KELLY' | 'FULL_KELLY'
+  fixedUnitAmount: number; // 自定义固定单位下注金额 (默认 100)
+  isAutoBetEnabled: boolean; // 是否开启系统自动下注
+  initialBankroll: number; // 龙7专职起始资金 (默认 10000)
+  countingSystem: Dragon7CountingSystem; // 'STANDARD' (4-7=-1, 8-9=+2)
+}
+
+export const defaultDragon7Settings: Dragon7Settings = {
+  threshold: 4.0,
+  betMode: 'FIXED',
+  fixedUnitAmount: 100,
+  isAutoBetEnabled: false,
+  initialBankroll: 10000,
+  countingSystem: 'STANDARD',
+};
+
+export interface Dragon7BetRecord {
+  id: string;
+  handNumber: number; // 会话总手号
+  shoeNumber: number; // 牌靴号
+  shoeHandNumber: number; // 当前靴内手号
+  rc: number; // 跑动计数 (Running Count)
+  tc: number; // 真数 (True Count)
+  betAmount: number; // 下注金额
+  isWin: boolean; // 是否命中龙7
+  payout: number; // 派彩 (40:1)
+  netProfit: number; // 单手净盈亏 (+40*bet 或 -bet)
+  shoeProfitAfter: number; // 结算后当前靴累计盈亏
+  cumulativeProfitAfter: number; // 结算后历史总累计盈亏
+  bankrollAfter: number; // 结算后龙7专职资金
+  bankerCardsStr: string; // 庄家牌型描述 (例如 "♥4 ♦A ♠2 (7点)")
+  playerCardsStr: string; // 闲家牌型描述
+  isDragon7: boolean;
+  timestamp: number;
+}
+
+export interface Dragon7AssistantStats {
+  totalWagered: number; // 本次会话已用成本
+  sessionProfit: number; // 本次会话当前盈亏
+  cumulativeProfit: number; // 跨会话累计总盈亏
+  currentBankroll: number; // 当前银行roll余额
+  totalBets: number; // 总下注手次数
+  winBets: number; // 命中次数
+  lossBets: number; // 未中次数
+  currentShoeProfit: number; // 当牌靴盈亏
+}
+
