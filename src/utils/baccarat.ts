@@ -319,22 +319,6 @@ export function getCumulativeProfitB2(results: HandResult[]): number {
   return results.reduce((acc, r) => acc + (r.b2NetProfit ?? 0), 0);
 }
 
-export function getCumulativeProfitB3(results: HandResult[]): number {
-  return results.reduce((acc, r) => acc + (r.b3NetProfit ?? 0), 0);
-}
-
-export function getCumulativeProfitC(results: HandResult[]): number {
-  return results.reduce((acc, r) => acc + (r.cNetProfit ?? 0), 0);
-}
-
-export function getCumulativeProfitC1(results: HandResult[]): number {
-  return results.reduce((acc, r) => acc + (r.c1NetProfit ?? 0), 0);
-}
-
-export function getCumulativeProfitC2(results: HandResult[]): number {
-  return results.reduce((acc, r) => acc + (r.c2NetProfit ?? 0), 0);
-}
-
 /**
  * Helper to generate CSV export string
  */
@@ -370,52 +354,21 @@ export function exportToCSV(results: HandResult[]): string {
     'Player B-2 Hand Profit',
     'Player B-2 Cumulative Profit',
     'Player B-2 Bankroll',
-    'Player B-3 Chasing?',
-    'Player B-3 Bet',
-    'Player B-3 Hand Profit',
-    'Player B-3 Cumulative Profit',
-    'Player B-3 Bankroll',
-    'Player C Chasing?',
-    'Player C Bet',
-    'Player C Hand Profit',
-    'Player C Cumulative Profit',
-    'Player C Bankroll',
-    'Player C-1 Chasing?',
-    'Player C-1 Bet',
-    'Player C-1 Hand Profit',
-    'Player C-1 Cumulative Profit',
-    'Player C-1 Bankroll',
-    'Player C-2 Chasing?',
-    'Player C-2 Bet',
-    'Player C-2 Hand Profit',
-    'Player C-2 Cumulative Profit',
-    'Player C-2 Bankroll',
   ];
 
   let cumA = 0;
   let cumB = 0;
   let cumB1 = 0;
   let cumB2 = 0;
-  let cumB3 = 0;
-  let cumC = 0;
-  let cumC1 = 0;
-  let cumC2 = 0;
 
   const rows = results.map((r) => {
     cumA += r.aNetProfit;
     cumB += r.bNetProfit;
     cumB1 += r.b1NetProfit ?? 0;
     cumB2 += r.b2NetProfit ?? 0;
-    cumB3 += r.b3NetProfit ?? 0;
-    cumC += r.cNetProfit ?? 0;
-    cumC1 += r.c1NetProfit ?? 0;
-    cumC2 += r.c2NetProfit ?? 0;
 
     const b1Status = r.b1TakeProfitStoppedAfter ? '已止盈' : r.b1WasChasing ? '追打中' : '观望中';
     const b2Status = r.b2TakeProfitStoppedAfter ? '已止盈' : r.b2WasChasing ? '追打中' : '观望中';
-    const b3Status = r.b3TakeProfitStoppedAfter ? '已停手(止盈/止损)' : r.b3WasChasing ? '追打中' : '观望中';
-    const c1Status = r.c1TakeProfitStoppedAfter ? '已止盈' : r.c1WasChasing ? '追打中' : '观望中';
-    const c2Status = r.c2TakeProfitStoppedAfter ? '已止盈' : r.c2WasChasing ? '追打中' : '观望中';
 
     return [
       r.handNumber,
@@ -451,30 +404,6 @@ export function exportToCSV(results: HandResult[]): string {
       r.b2NetProfit ?? 0,
       cumB2,
       r.b2BankrollAfter ?? 0,
-
-      b3Status,
-      r.b3Bet?.mainBet === 'PLAYER' ? '闲' : r.b3Bet?.mainBet === 'BANKER' ? '庄' : '未注',
-      r.b3NetProfit ?? 0,
-      cumB3,
-      r.b3BankrollAfter ?? 0,
-
-      r.cWasChasing ? '追打中' : '观望中',
-      r.cBet?.mainBet === 'PLAYER' ? '闲' : r.cBet?.mainBet === 'BANKER' ? '庄' : '未注',
-      r.cNetProfit ?? 0,
-      cumC,
-      r.cBankrollAfter ?? 0,
-
-      c1Status,
-      r.c1Bet?.mainBet === 'PLAYER' ? '闲' : r.c1Bet?.mainBet === 'BANKER' ? '庄' : '未注',
-      r.c1NetProfit ?? 0,
-      cumC1,
-      r.c1BankrollAfter ?? 0,
-
-      c2Status,
-      r.c2Bet?.mainBet === 'PLAYER' ? '闲' : r.c2Bet?.mainBet === 'BANKER' ? '庄' : '未注',
-      r.c2NetProfit ?? 0,
-      cumC2,
-      r.c2BankrollAfter ?? 0,
     ];
   });
 

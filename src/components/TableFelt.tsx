@@ -487,11 +487,19 @@ export const TableFelt: React.FC<TableFeltProps> = ({
                 {lastHandResult.bNetProfit >= 0 ? `+¥${lastHandResult.bNetProfit}` : `-¥${Math.abs(lastHandResult.bNetProfit)}`}
               </span>
             </div>
-            {lastHandResult.cNetProfit !== undefined && (
+            {lastHandResult.b1NetProfit !== undefined && (
               <div className="flex items-center space-x-1 border-l border-[#b8860b]/30 pl-2">
-                <span className="text-amber-200/80">玩家C:</span>
-                <span className={`font-mono font-bold ${lastHandResult.cNetProfit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                  {lastHandResult.cNetProfit >= 0 ? `+¥${lastHandResult.cNetProfit}` : `-¥${Math.abs(lastHandResult.cNetProfit)}`}
+                <span className="text-amber-200/80">玩家B-1:</span>
+                <span className={`font-mono font-bold ${lastHandResult.b1NetProfit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {lastHandResult.b1NetProfit >= 0 ? `+¥${lastHandResult.b1NetProfit}` : `-¥${Math.abs(lastHandResult.b1NetProfit)}`}
+                </span>
+              </div>
+            )}
+            {lastHandResult.b2NetProfit !== undefined && (
+              <div className="flex items-center space-x-1 border-l border-[#b8860b]/30 pl-2">
+                <span className="text-amber-200/80">玩家B-2:</span>
+                <span className={`font-mono font-bold ${lastHandResult.b2NetProfit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {lastHandResult.b2NetProfit >= 0 ? `+¥${lastHandResult.b2NetProfit}` : `-¥${Math.abs(lastHandResult.b2NetProfit)}`}
                 </span>
               </div>
             )}

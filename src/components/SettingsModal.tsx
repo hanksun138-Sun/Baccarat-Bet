@@ -24,11 +24,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [bPostExhaustionChaseBet, setBPostExhaustionChaseBet] = useState<number>(settings.bPostExhaustionChaseBet);
   const [b1ChaseBet, setB1ChaseBet] = useState<number>(settings.b1ChaseBet ?? 200);
   const [b2ChaseBet, setB2ChaseBet] = useState<number>(settings.b2ChaseBet ?? 200);
-  const [b3ChaseBet, setB3ChaseBet] = useState<number>(settings.b3ChaseBet ?? 200);
-  const [cChaseBet, setCChaseBet] = useState<number>(settings.cChaseBet ?? 200);
-  const [cPostExhaustionChaseBet, setCPostExhaustionChaseBet] = useState<number>(settings.cPostExhaustionChaseBet ?? 200);
-  const [c1ChaseBet, setC1ChaseBet] = useState<number>(settings.c1ChaseBet ?? 200);
-  const [c2ChaseBet, setC2ChaseBet] = useState<number>(settings.c2ChaseBet ?? 200);
   const [aDefaultBet, setADefaultBet] = useState<number>(settings.aDefaultBet);
   const [aEnableSideBets, setAEnableSideBets] = useState<boolean>(settings.aEnableSideBets);
   const [botTakeProfitResetMode, setBotTakeProfitResetMode] = useState<'ISOLATED_SHOE' | 'CUMULATIVE'>(
@@ -51,14 +46,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       b1PostExhaustionChaseBet: Math.max(10, b1ChaseBet),
       b2ChaseBet: Math.max(10, b2ChaseBet),
       b2PostExhaustionChaseBet: Math.max(10, b2ChaseBet),
-      b3ChaseBet: Math.max(10, b3ChaseBet),
-      b3PostExhaustionChaseBet: Math.max(10, b3ChaseBet),
-      cChaseBet: Math.max(10, cChaseBet),
-      cPostExhaustionChaseBet: Math.max(10, cPostExhaustionChaseBet),
-      c1ChaseBet: Math.max(10, c1ChaseBet),
-      c1PostExhaustionChaseBet: Math.max(10, c1ChaseBet),
-      c2ChaseBet: Math.max(10, c2ChaseBet),
-      c2PostExhaustionChaseBet: Math.max(10, c2ChaseBet),
       aDefaultBet: Math.max(1, aDefaultBet),
       aEnableSideBets,
       sideBetAmount: 10,
@@ -164,71 +151,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </span>
           </div>
 
-          {/* Player C Normal Chase Bet Amount */}
-          <div>
-            <label className="block text-amber-200 font-bold mb-1">
-              玩家C 固定追打金额 (连赢2手退出，默认 200 元):
-            </label>
-            <div className="grid grid-cols-5 gap-1.5 mb-2">
-              {[100, 200, 300, 400, 500, 600, 700, 800, 900, 1000].map((amt) => (
-                <button
-                  key={amt}
-                  type="button"
-                  onClick={() => setCChaseBet(amt)}
-                  className={`py-1 rounded border text-xs font-mono font-bold transition-all ${
-                    cChaseBet === amt
-                      ? 'bg-[#d4af37] text-black border-amber-200 shadow-sm'
-                      : 'bg-black/60 text-amber-200 border-[#b8860b]/30 hover:bg-black/90'
-                  }`}
-                >
-                  ¥{amt}
-                </button>
-              ))}
-            </div>
-            <input
-              type="number"
-              min="10"
-              step="100"
-              value={cChaseBet}
-              onChange={(e) => setCChaseBet(parseInt(e.target.value, 10) || 200)}
-              className="w-full bg-black/70 border border-[#b8860b]/40 rounded-lg p-2.5 text-amber-300 font-mono focus:outline-none focus:border-[#d4af37]"
-            />
-          </div>
-
-          {/* Player C Post-Exhaustion Chase Bet Amount */}
-          <div>
-            <label className="block text-amber-200 font-bold mb-1">
-              玩家A输光后 玩家C追打金额 (可选 100 ~ 1000 元):
-            </label>
-            <div className="grid grid-cols-5 gap-1.5 mb-2">
-              {[100, 200, 300, 400, 500, 600, 700, 800, 900, 1000].map((amt) => (
-                <button
-                  key={amt}
-                  type="button"
-                  onClick={() => setCPostExhaustionChaseBet(amt)}
-                  className={`py-1 rounded border text-xs font-mono font-bold transition-all ${
-                    cPostExhaustionChaseBet === amt
-                      ? 'bg-[#d4af37] text-black border-amber-200 shadow-sm'
-                      : 'bg-black/60 text-amber-200 border-[#b8860b]/30 hover:bg-black/90'
-                  }`}
-                >
-                  ¥{amt}
-                </button>
-              ))}
-            </div>
-            <input
-              type="number"
-              min="10"
-              step="100"
-              value={cPostExhaustionChaseBet}
-              onChange={(e) => setCPostExhaustionChaseBet(parseInt(e.target.value, 10) || 200)}
-              className="w-full bg-black/70 border border-[#b8860b]/40 rounded-lg p-2.5 text-amber-300 font-mono focus:outline-none focus:border-[#d4af37]"
-            />
-            <span className="text-[11px] text-amber-200/60 mt-1 block">
-              * 当玩家A资金归零后，C触发追打时使用此固定金额 (A连赢2手退出)。
-            </span>
-          </div>
-
           {/* Player A Default Flat Bet */}
           <div>
             <label className="block text-amber-200 font-bold mb-1">
@@ -257,11 +179,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             />
           </div>
 
-          {/* Bot Take-Profit Reset Mode (B-1, B-2, B-3, C-1, C-2 止盈/换鞋跨靴机制) */}
+          {/* Bot Take-Profit Reset Mode (B-1, B-2 止盈/换鞋跨靴机制) */}
           <div className="p-3 rounded-lg bg-black/60 border border-[#b8860b]/40 space-y-2">
             <div className="flex items-center justify-between">
               <span className="font-bold text-amber-200 text-sm">
-                🎯 止盈对家 (B-1/B-2/B-3/C-1/C-2) 换鞋止盈重置模式:
+                🎯 止盈对家 (B-1/B-2) 换鞋止盈重置模式:
               </span>
               <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-[#d4af37] border border-[#b8860b]/40">
                 资金管理 (历史即时重算)

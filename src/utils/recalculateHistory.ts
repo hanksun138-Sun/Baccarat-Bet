@@ -5,7 +5,6 @@ import {
   PlayerBBet,
   PlayerBotState,
   PlayerBState,
-  PlayerCState,
   ShoeRecord,
   TrendPoint,
 } from '../types';
@@ -20,10 +19,6 @@ export interface RecalculationParams {
     b?: number;
     b1?: number;
     b2?: number;
-    b3?: number;
-    c?: number;
-    c1?: number;
-    c2?: number;
   };
 }
 
@@ -36,19 +31,11 @@ export interface RecalculationResult {
     bBankroll: number;
     b1Bankroll: number;
     b2Bankroll: number;
-    b3Bankroll: number;
-    cBankroll: number;
-    c1Bankroll: number;
-    c2Bankroll: number;
   };
   botStates: {
     bState: PlayerBState;
     b1State: PlayerBotState;
     b2State: PlayerBotState;
-    b3State: PlayerBotState;
-    cState: PlayerCState;
-    c1State: PlayerBotState;
-    c2State: PlayerBotState;
   };
   trendPoints: TrendPoint[];
   stats: GameStats;
@@ -58,7 +45,6 @@ interface InternalBotTracker {
   id: string;
   maxWinsToExit: number;
   takeProfitUnits: number;
-  stopLossUnits?: number;
   betAmount: number;
   bankroll: number;
   isChasing: boolean;
@@ -73,7 +59,7 @@ interface InternalBotTracker {
 
 /**
  * Re-simulates all historical shoes and hands according to the selected
- * botTakeProfitResetMode ('ISOLATED_SHOE' vs 'CUMULATIVE') and current bet settings.
+ * botTakeProfitResetMode ('ISOLATED_SHOE' vs 'CUMULATIVE') and current bet settings for B, B-1, B-2.
  */
 export function recalculateFullHistory(params: RecalculationParams): RecalculationResult {
   const {
@@ -89,19 +75,11 @@ export function recalculateFullHistory(params: RecalculationParams): Recalculati
   const bBetAmt = settings.bChaseBet || 200;
   const b1BetAmt = settings.b1ChaseBet || 200;
   const b2BetAmt = settings.b2ChaseBet || 200;
-  const b3BetAmt = settings.b3ChaseBet || 200;
-  const cBetAmt = settings.cChaseBet || 200;
-  const c1BetAmt = settings.c1ChaseBet || 200;
-  const c2BetAmt = settings.c2ChaseBet || 200;
 
   const initA = initialBankrolls.a ?? 1000;
   const initB = initialBankrolls.b ?? 10000;
   const initB1 = initialBankrolls.b1 ?? 10000;
   const initB2 = initialBankrolls.b2 ?? 10000;
-  const initB3 = initialBankrolls.b3 ?? 10000;
-  const initC = initialBankrolls.c ?? 10000;
-  const initC1 = initialBankrolls.c1 ?? 10000;
-  const initC2 = initialBankrolls.c2 ?? 10000;
 
   const bots: Record<string, InternalBotTracker> = {
     B: {
@@ -149,66 +127,6 @@ export function recalculateFullHistory(params: RecalculationParams): Recalculati
       profitSinceReset: 0,
       isTakeProfitStopped: false,
     },
-    B3: {
-      id: 'B-3',
-      maxWinsToExit: 3,
-      takeProfitUnits: 4,
-      betAmount: b3BetAmt,
-      bankroll: initB3,
-      isChasing: false,
-      aConsecutiveWins: 0,
-      totalChasesTriggered: 0,
-      totalChaseHands: 0,
-      chaseWins: 0,
-      chaseLosses: 0,
-      profitSinceReset: 0,
-      isTakeProfitStopped: false,
-    },
-    C: {
-      id: 'C',
-      maxWinsToExit: 2,
-      takeProfitUnits: 0,
-      betAmount: cBetAmt,
-      bankroll: initC,
-      isChasing: false,
-      aConsecutiveWins: 0,
-      totalChasesTriggered: 0,
-      totalChaseHands: 0,
-      chaseWins: 0,
-      chaseLosses: 0,
-      profitSinceReset: 0,
-      isTakeProfitStopped: false,
-    },
-    C1: {
-      id: 'C-1',
-      maxWinsToExit: 2,
-      takeProfitUnits: 3,
-      betAmount: c1BetAmt,
-      bankroll: initC1,
-      isChasing: false,
-      aConsecutiveWins: 0,
-      totalChasesTriggered: 0,
-      totalChaseHands: 0,
-      chaseWins: 0,
-      chaseLosses: 0,
-      profitSinceReset: 0,
-      isTakeProfitStopped: false,
-    },
-    C2: {
-      id: 'C-2',
-      maxWinsToExit: 2,
-      takeProfitUnits: 2,
-      betAmount: c2BetAmt,
-      bankroll: initC2,
-      isChasing: false,
-      aConsecutiveWins: 0,
-      totalChasesTriggered: 0,
-      totalChaseHands: 0,
-      chaseWins: 0,
-      chaseLosses: 0,
-      profitSinceReset: 0,
-      isTakeProfitStopped: false,
-    },
   };
 
   let runningBankrollA = initA;
@@ -219,20 +137,12 @@ export function recalculateFullHistory(params: RecalculationParams): Recalculati
     B: initB,
     B1: initB1,
     B2: initB2,
-    B3: initB3,
-    C: initC,
-    C1: initC1,
-    C2: initC2,
   };
 
   const maxDrawdowns: Record<string, number> = {
     B: 0,
     B1: 0,
     B2: 0,
-    B3: 0,
-    C: 0,
-    C1: 0,
-    C2: 0,
   };
 
   const trendPoints: TrendPoint[] = [
@@ -242,10 +152,6 @@ export function recalculateFullHistory(params: RecalculationParams): Recalculati
       bCum: 0,
       b1Cum: 0,
       b2Cum: 0,
-      b3Cum: 0,
-      cCum: 0,
-      c1Cum: 0,
-      c2Cum: 0,
     },
   ];
 
@@ -255,28 +161,27 @@ export function recalculateFullHistory(params: RecalculationParams): Recalculati
     maxBankrollA = Math.max(maxBankrollA, runningBankrollA);
     maxDrawdownA = Math.max(maxDrawdownA, maxBankrollA - runningBankrollA);
 
-    for (const key of ['B', 'B1', 'B2', 'B3', 'C', 'C1', 'C2']) {
+    for (const key of ['B', 'B1', 'B2']) {
       const b = bots[key];
       maxBankrolls[key] = Math.max(maxBankrolls[key], b.bankroll);
       maxDrawdowns[key] = Math.max(maxDrawdowns[key], maxBankrolls[key] - b.bankroll);
     }
   };
 
-  // Helper to step all bots through one hand
+  // Helper to step bots through one hand
   const stepBotsForHand = (
     winner: 'PLAYER' | 'BANKER' | 'TIE',
     aMainResult: 'WIN' | 'LOSS' | 'PUSH' | 'NO_BET'
   ): Record<string, { bet: PlayerBBet; netProfit: number; mainResult: 'WIN' | 'LOSS' | 'PUSH' | 'NO_BET'; stoppedAfter: boolean }> => {
     const results: Record<string, { bet: PlayerBBet; netProfit: number; mainResult: 'WIN' | 'LOSS' | 'PUSH' | 'NO_BET'; stoppedAfter: boolean }> = {};
 
-    for (const key of ['B', 'B1', 'B2', 'B3', 'C', 'C1', 'C2']) {
+    for (const key of ['B', 'B1', 'B2']) {
       const bot = bots[key];
       let bet: PlayerBBet = { mainBet: null, mainAmount: 0 };
 
       if (bot.isChasing && !bot.isTakeProfitStopped) {
-        // Bets with the winning trend (opposite to Player A's position)
         bet = {
-          mainBet: 'BANKER', // Direction marker
+          mainBet: 'BANKER',
           mainAmount: bot.betAmount,
         };
       }
@@ -289,13 +194,11 @@ export function recalculateFullHistory(params: RecalculationParams): Recalculati
           netProfit = 0;
           mainResult = 'PUSH';
         } else if (aMainResult === 'LOSS') {
-          // A lost, so counter-bet bot wins!
           netProfit = bot.betAmount;
           mainResult = 'WIN';
           bot.chaseWins += 1;
           bot.totalChaseHands += 1;
         } else if (aMainResult === 'WIN') {
-          // A won, so counter-bet bot loses!
           netProfit = -bot.betAmount;
           mainResult = 'LOSS';
           bot.chaseLosses += 1;
@@ -351,7 +254,7 @@ export function recalculateFullHistory(params: RecalculationParams): Recalculati
 
   // Helper to reset bots between shoes based on the selected mode
   const resetBotsForNewShoe = () => {
-    for (const key of ['B', 'B1', 'B2', 'B3', 'C', 'C1', 'C2']) {
+    for (const key of ['B', 'B1', 'B2']) {
       const bot = bots[key];
       const reachedTarget = bot.isTakeProfitStopped || (bot.takeProfitUnits > 0 && bot.profitSinceReset >= bot.takeProfitUnits * bot.betAmount);
 
@@ -359,8 +262,6 @@ export function recalculateFullHistory(params: RecalculationParams): Recalculati
       bot.aConsecutiveWins = 0;
       bot.isTakeProfitStopped = false;
 
-      // ISOLATED_SHOE: reset profitSinceReset to 0 every shoe
-      // CUMULATIVE: if reached target, reset to 0; if lost/not reached target, keep carrying over!
       if (isIsolated) {
         bot.profitSinceReset = 0;
       } else {
@@ -371,14 +272,11 @@ export function recalculateFullHistory(params: RecalculationParams): Recalculati
 
   // 1. Process all completed shoes in shoeHistory
   const updatedShoeHistory: ShoeRecord[] = shoeHistory.map((s, shoeIdx) => {
-    // If shoe starts, reset bot shoe states (except for first shoe)
     if (shoeIdx > 0) {
       resetBotsForNewShoe();
     }
 
-    // Authentic shoe profits for B and C (who have no take-profit / 不止盈)
     const shoeNetB = s.bProfit;
-    const shoeNetC = s.cProfit;
 
     const calcBotShoeNet = (
       botKey: string,
@@ -390,13 +288,11 @@ export function recalculateFullHistory(params: RecalculationParams): Recalculati
       const target = units * bot.betAmount;
 
       if (isIsolated) {
-        // In isolated shoe mode, use recorded profit if available, or clamp parent raw profit to target
         const profit = recordedProfit !== undefined ? recordedProfit : (parentProfit >= target ? target : parentProfit);
         bot.profitSinceReset = 0;
         bot.bankroll = Math.max(0, bot.bankroll + profit);
         return profit;
       } else {
-        // In cumulative mode, check cumulative recovery progress against target
         const required = target - bot.profitSinceReset;
         if (parentProfit >= required) {
           const profit = required;
@@ -414,12 +310,8 @@ export function recalculateFullHistory(params: RecalculationParams): Recalculati
 
     const shoeNetB1 = calcBotShoeNet('B1', 3, isIsolated ? s.b1Profit : undefined, s.bProfit);
     const shoeNetB2 = calcBotShoeNet('B2', 2, isIsolated ? s.b2Profit : undefined, s.bProfit);
-    const shoeNetB3 = calcBotShoeNet('B3', 4, isIsolated ? s.b3Profit : undefined, s.bProfit);
-    const shoeNetC1 = calcBotShoeNet('C1', 3, isIsolated ? s.c1Profit : undefined, s.cProfit);
-    const shoeNetC2 = calcBotShoeNet('C2', 2, isIsolated ? s.c2Profit : undefined, s.cProfit);
 
     bots.B.bankroll = Math.max(0, bots.B.bankroll + shoeNetB);
-    bots.C.bankroll = Math.max(0, bots.C.bankroll + shoeNetC);
 
     globalHandIndex += s.totalHands || 1;
     updateStatsForHand();
@@ -430,10 +322,6 @@ export function recalculateFullHistory(params: RecalculationParams): Recalculati
       bCum: bots.B.bankroll - initB,
       b1Cum: bots.B1.bankroll - initB1,
       b2Cum: bots.B2.bankroll - initB2,
-      b3Cum: bots.B3.bankroll - initB3,
-      cCum: bots.C.bankroll - initC,
-      c1Cum: bots.C1.bankroll - initC1,
-      c2Cum: bots.C2.bankroll - initC2,
     });
 
     runningBankrollA = s.aBankrollEnd ?? runningBankrollA;
@@ -443,17 +331,9 @@ export function recalculateFullHistory(params: RecalculationParams): Recalculati
       bProfit: shoeNetB,
       b1Profit: shoeNetB1,
       b2Profit: shoeNetB2,
-      b3Profit: shoeNetB3,
-      cProfit: shoeNetC,
-      c1Profit: shoeNetC1,
-      c2Profit: shoeNetC2,
       bBankrollEnd: bots.B.bankroll,
       b1BankrollEnd: bots.B1.bankroll,
       b2BankrollEnd: bots.B2.bankroll,
-      b3BankrollEnd: bots.B3.bankroll,
-      cBankrollEnd: bots.C.bankroll,
-      c1BankrollEnd: bots.C1.bankroll,
-      c2BankrollEnd: bots.C2.bankroll,
     };
   });
 
@@ -476,10 +356,6 @@ export function recalculateFullHistory(params: RecalculationParams): Recalculati
       bCum: bots.B.bankroll - initB,
       b1Cum: bots.B1.bankroll - initB1,
       b2Cum: bots.B2.bankroll - initB2,
-      b3Cum: bots.B3.bankroll - initB3,
-      cCum: bots.C.bankroll - initC,
-      c1Cum: bots.C1.bankroll - initC1,
-      c2Cum: bots.C2.bankroll - initC2,
     });
 
     return {
@@ -507,38 +383,6 @@ export function recalculateFullHistory(params: RecalculationParams): Recalculati
       b2BankrollAfter: bots.B2.bankroll,
       b2TakeProfitStoppedAfter: res.B2.stoppedAfter,
       b2ChasingAfter: bots.B2.isChasing,
-
-      b3Bet: res.B3.bet,
-      b3WasChasing: bots.B3.isChasing,
-      b3MainResult: res.B3.mainResult,
-      b3NetProfit: res.B3.netProfit,
-      b3BankrollAfter: bots.B3.bankroll,
-      b3TakeProfitStoppedAfter: res.B3.stoppedAfter,
-      b3ChasingAfter: bots.B3.isChasing,
-
-      cBet: res.C.bet,
-      cWasChasing: bots.C.isChasing,
-      cMainResult: res.C.mainResult,
-      cNetProfit: res.C.netProfit,
-      cBankrollAfter: bots.C.bankroll,
-      cChasingAfter: bots.C.isChasing,
-      aConsecutiveWinsAfterC: bots.C.aConsecutiveWins,
-
-      c1Bet: res.C1.bet,
-      c1WasChasing: bots.C1.isChasing,
-      c1MainResult: res.C1.mainResult,
-      c1NetProfit: res.C1.netProfit,
-      c1BankrollAfter: bots.C1.bankroll,
-      c1TakeProfitStoppedAfter: res.C1.stoppedAfter,
-      c1ChasingAfter: bots.C1.isChasing,
-
-      c2Bet: res.C2.bet,
-      c2WasChasing: bots.C2.isChasing,
-      c2MainResult: res.C2.mainResult,
-      c2NetProfit: res.C2.netProfit,
-      c2BankrollAfter: bots.C2.bankroll,
-      c2TakeProfitStoppedAfter: res.C2.stoppedAfter,
-      c2ChasingAfter: bots.C2.isChasing,
     };
   });
 
@@ -587,52 +431,6 @@ export function recalculateFullHistory(params: RecalculationParams): Recalculati
     isTakeProfitStopped: bots.B2.isTakeProfitStopped,
   };
 
-  const b3State: PlayerBotState = {
-    isChasing: bots.B3.isChasing,
-    aConsecutiveWins: bots.B3.aConsecutiveWins,
-    totalChasesTriggered: bots.B3.totalChasesTriggered,
-    totalChaseHands: bots.B3.totalChaseHands,
-    chaseWins: bots.B3.chaseWins,
-    chaseLosses: bots.B3.chaseLosses,
-    profitSinceReset: bots.B3.profitSinceReset,
-    isTakeProfitStopped: bots.B3.isTakeProfitStopped,
-  };
-
-  const cState: PlayerCState = {
-    isChasing: bots.C.isChasing,
-    aConsecutiveWins: bots.C.aConsecutiveWins,
-    totalChasesTriggered: bots.C.totalChasesTriggered,
-    totalChaseHands: bots.C.totalChaseHands,
-    chaseWins: bots.C.chaseWins,
-    chaseLosses: bots.C.chaseLosses,
-    profitSinceReset: bots.C.profitSinceReset,
-    isTakeProfitStopped: bots.C.isTakeProfitStopped,
-    chaseWinsC: bots.C.chaseWins,
-    chaseLossesC: bots.C.chaseLosses,
-  };
-
-  const c1State: PlayerBotState = {
-    isChasing: bots.C1.isChasing,
-    aConsecutiveWins: bots.C1.aConsecutiveWins,
-    totalChasesTriggered: bots.C1.totalChasesTriggered,
-    totalChaseHands: bots.C1.totalChaseHands,
-    chaseWins: bots.C1.chaseWins,
-    chaseLosses: bots.C1.chaseLosses,
-    profitSinceReset: bots.C1.profitSinceReset,
-    isTakeProfitStopped: bots.C1.isTakeProfitStopped,
-  };
-
-  const c2State: PlayerBotState = {
-    isChasing: bots.C2.isChasing,
-    aConsecutiveWins: bots.C2.aConsecutiveWins,
-    totalChasesTriggered: bots.C2.totalChasesTriggered,
-    totalChaseHands: bots.C2.totalChaseHands,
-    chaseWins: bots.C2.chaseWins,
-    chaseLosses: bots.C2.chaseLosses,
-    profitSinceReset: bots.C2.profitSinceReset,
-    isTakeProfitStopped: bots.C2.isTakeProfitStopped,
-  };
-
   const updatedAllHandResults =
     updatedHandResults.length > 0 ? updatedHandResults : allHandResults;
 
@@ -655,14 +453,6 @@ export function recalculateFullHistory(params: RecalculationParams): Recalculati
     b1MaxDrawdown: maxDrawdowns.B1,
     b2MaxBankroll: maxBankrolls.B2,
     b2MaxDrawdown: maxDrawdowns.B2,
-    b3MaxBankroll: maxBankrolls.B3,
-    b3MaxDrawdown: maxDrawdowns.B3,
-    cMaxBankroll: maxBankrolls.C,
-    cMaxDrawdown: maxDrawdowns.C,
-    c1MaxBankroll: maxBankrolls.C1,
-    c1MaxDrawdown: maxDrawdowns.C1,
-    c2MaxBankroll: maxBankrolls.C2,
-    c2MaxDrawdown: maxDrawdowns.C2,
   };
 
   return {
@@ -674,19 +464,11 @@ export function recalculateFullHistory(params: RecalculationParams): Recalculati
       bBankroll: bots.B.bankroll,
       b1Bankroll: bots.B1.bankroll,
       b2Bankroll: bots.B2.bankroll,
-      b3Bankroll: bots.B3.bankroll,
-      cBankroll: bots.C.bankroll,
-      c1Bankroll: bots.C1.bankroll,
-      c2Bankroll: bots.C2.bankroll,
     },
     botStates: {
       bState,
       b1State,
       b2State,
-      b3State,
-      cState,
-      c1State,
-      c2State,
     },
     trendPoints: finalTrendPoints,
     stats,

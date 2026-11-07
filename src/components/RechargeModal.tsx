@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-export type RechargePlayer = 'A' | 'B' | 'B-1' | 'B-2' | 'B-3' | 'C' | 'C-1' | 'C-2';
+export type RechargePlayer = 'A' | 'B' | 'B-1' | 'B-2';
 
 interface RechargeModalProps {
   isOpen: boolean;
@@ -35,10 +35,6 @@ export const RechargeModal: React.FC<RechargeModalProps> = ({
       case 'B': return '玩家B (无止盈)';
       case 'B-1': return '玩家B-1 (止盈3注)';
       case 'B-2': return '玩家B-2 (止盈2注)';
-      case 'B-3': return '玩家B-3 (止盈4注)';
-      case 'C': return '玩家C (无止盈)';
-      case 'C-1': return '玩家C-1 (止盈3注)';
-      case 'C-2': return '玩家C-2 (止盈2注)';
     }
   };
 
