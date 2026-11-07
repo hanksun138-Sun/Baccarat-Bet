@@ -107,6 +107,7 @@ export interface ShoeRecord {
   bProfit: number;
   b1Profit?: number;
   b2Profit?: number;
+  d7Profit?: number;
   bankerWins: number;
   playerWins: number;
   ties: number;
@@ -116,6 +117,7 @@ export interface ShoeRecord {
   bBankrollEnd: number;
   b1BankrollEnd?: number;
   b2BankrollEnd?: number;
+  d7BankrollEnd?: number;
   timestamp: number;
 }
 
@@ -172,6 +174,8 @@ export interface GameStats {
   b1MaxDrawdown?: number;
   b2MaxBankroll?: number;
   b2MaxDrawdown?: number;
+  d7MaxBankroll?: number;
+  d7MaxDrawdown?: number;
 }
 
 export interface D7Stats {
@@ -200,6 +204,7 @@ export interface TrendPoint {
   bCum: number;
   b1Cum: number;
   b2Cum: number;
+  d7Cum?: number;
 }
 
 export const initialD7Stats: D7Stats = {

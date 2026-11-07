@@ -337,6 +337,12 @@ export default function App() {
       const bProfit = handResults.reduce((sum, h) => sum + h.bNetProfit, 0);
       const b1Profit = handResults.reduce((sum, h) => sum + (h.b1NetProfit ?? 0), 0);
       const b2Profit = handResults.reduce((sum, h) => sum + (h.b2NetProfit ?? 0), 0);
+      const d7Profit = handResults.reduce((sum, h) => {
+        if (h.aBet.dragon7Amount > 0) {
+          return sum + (h.isDragon7 ? h.aBet.dragon7Amount * 40 : -h.aBet.dragon7Amount);
+        }
+        return sum;
+      }, 0);
 
       const bankerWins = handResults.filter((h) => h.winner === 'BANKER').length;
       const playerWins = handResults.filter((h) => h.winner === 'PLAYER').length;
@@ -352,6 +358,7 @@ export default function App() {
         bProfit,
         b1Profit,
         b2Profit,
+        d7Profit,
         bankerWins,
         playerWins,
         ties,
@@ -361,6 +368,7 @@ export default function App() {
         bBankrollEnd: bBankroll,
         b1BankrollEnd: b1Bankroll,
         b2BankrollEnd: b2Bankroll,
+        d7BankrollEnd: d7Bankroll,
         timestamp: Date.now(),
       };
 
@@ -895,12 +903,17 @@ export default function App() {
     }
 
     // Update Trend Points (Keep array small with downsampling if over 2000 points)
+    const latestD7Net = effectiveD7Bet > 0 ? (isDragon7 ? effectiveD7Bet * 40 : -effectiveD7Bet) : 0;
+    const prevD7Cum = d7History.length > 0 ? d7History[d7History.length - 1].cumulativeProfitAfter : 0;
+    const currentD7Cum = prevD7Cum + latestD7Net;
+
     const newTrendPt: TrendPoint = {
       handNumber: newHandNum,
       aCum: aBankrollAfter - 1000,
       bCum: bRes.bankrollAfter - 10000,
       b1Cum: (b1Res.bankrollAfter ?? 10000) - 10000,
       b2Cum: (b2Res.bankrollAfter ?? 10000) - 10000,
+      d7Cum: currentD7Cum,
     };
 
     setTrendPoints((prev) => {
@@ -950,6 +963,10 @@ export default function App() {
       const b2MaxBankroll = Math.max(prev.b2MaxBankroll ?? 10000, b2Res.bankrollAfter);
       const b2MaxDrawdown = Math.max(prev.b2MaxDrawdown ?? 0, b2MaxBankroll - b2Res.bankrollAfter);
 
+      const latestD7Bankroll = effectiveD7Bet > 0 ? (isDragon7 ? d7Bankroll + effectiveD7Bet * 40 : d7Bankroll - effectiveD7Bet) : d7Bankroll;
+      const d7MaxBankroll = Math.max(prev.d7MaxBankroll ?? 10000, latestD7Bankroll);
+      const d7MaxDrawdown = Math.max(prev.d7MaxDrawdown ?? 0, d7MaxBankroll - latestD7Bankroll);
+
       return {
         aTotalHandsBet,
         aTotalWins,
@@ -969,6 +986,8 @@ export default function App() {
         b1MaxDrawdown,
         b2MaxBankroll,
         b2MaxDrawdown,
+        d7MaxBankroll,
+        d7MaxDrawdown,
       };
     });
 
@@ -1220,6 +1239,8 @@ export default function App() {
             bBankroll={bBankroll}
             b1Bankroll={b1Bankroll}
             b2Bankroll={b2Bankroll}
+            d7Bankroll={d7Bankroll}
+            d7History={d7History}
             botTakeProfitResetMode={settings.botTakeProfitResetMode}
             onToggleResetMode={handleToggleResetMode}
             onResetSession={handleResetSession}
