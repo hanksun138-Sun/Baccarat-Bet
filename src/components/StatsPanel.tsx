@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   D7Stats,
   Dragon7BetRecord,
+  Panda8BetRecord,
   GameStats,
   HandResult,
   PlayerBState,
@@ -27,6 +28,8 @@ interface StatsPanelProps {
   b2Bankroll?: number;
   d7Bankroll?: number;
   d7History?: Dragon7BetRecord[];
+  p8Bankroll?: number;
+  p8History?: Panda8BetRecord[];
   botTakeProfitResetMode?: 'ISOLATED_SHOE' | 'CUMULATIVE';
   onToggleResetMode?: () => void;
   onResetSession?: () => void;
@@ -48,6 +51,8 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({
   b2Bankroll = 10000,
   d7Bankroll = 10000,
   d7History = [],
+  p8Bankroll = 10000,
+  p8History = [],
   botTakeProfitResetMode = 'ISOLATED_SHOE',
   onToggleResetMode,
   onResetSession,
@@ -109,12 +114,14 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({
 - 玩家A累计盈亏: ¥${runningCumA}
 - 玩家B (无止盈): ¥${runningCumB} | B-1 (止盈3注): ¥${runningCumB1} | B-2 (止盈2注): ¥${runningCumB2}
 - 🐉 龙7算牌侧注: 累计盈亏 ¥${totalD7Profit} | 下注 ${d7TotalBets} 次，命中 ${d7WinCount} 次 (命中率 ${d7WinRate}%)
+- 🐼 熊猫8算牌侧注: 累计盈亏 ¥${totalP8Profit} | 下注 ${p8TotalBets} 次，命中 ${p8WinCount} 次 (命中率 ${p8WinRate}%)
 
 【请帮我分析】
 1. 各玩家（A及追打对家B/B-1/B-2）的胜率、期望收益及回撤风险。
 2. 止盈机制（B-1的+3注、B-2的+2注对比无止盈B）在不同靴次表现与资金留存度。
 3. 龙7算牌辅助系统（True Count≥+4切入）的期望值、命中收益与最大回撤表现。
-4. 综合策略优化建议。
+4. 熊猫8算牌辅助系统（True Count≥+11切入）的期望值、命中收益与最大回撤表现。
+5. 综合策略优化建议。
 
 --- CSV 完整数据 ---
 ${csvStr}
@@ -140,6 +147,13 @@ ${csvStr}
     }
     return s;
   }, 0);
+  const currentShoeProfitP8 = handResults.reduce((s, h) => {
+    const p8Amt = h.aBet.panda8Amount || 0;
+    if (p8Amt > 0) {
+      return s + (h.isPanda8 ? p8Amt * 25 : -p8Amt);
+    }
+    return s;
+  }, 0);
 
   const currentShoeBankerWins = handResults.filter((h) => h.winner === 'BANKER').length;
   const currentShoePlayerWins = handResults.filter((h) => h.winner === 'PLAYER').length;
@@ -156,6 +170,7 @@ ${csvStr}
     b1Profit: currentShoeProfitB1,
     b2Profit: currentShoeProfitB2,
     d7Profit: currentShoeProfitD7,
+    p8Profit: currentShoeProfitP8,
     bankerWins: currentShoeBankerWins,
     playerWins: currentShoePlayerWins,
     ties: currentShoeTies,
@@ -166,6 +181,7 @@ ${csvStr}
     b1BankrollEnd: b1Bankroll,
     b2BankrollEnd: b2Bankroll,
     d7BankrollEnd: d7Bankroll,
+    p8BankrollEnd: p8Bankroll,
     timestamp: Date.now(),
     isCurrent: true,
   };
@@ -180,6 +196,7 @@ ${csvStr}
   let runningCumB1 = 0;
   let runningCumB2 = 0;
   let runningCumD7 = 0;
+  let runningCumP8 = 0;
 
   const processedShoes = allShoesList.map((s) => {
     runningCumA += s.aProfit;
@@ -187,6 +204,7 @@ ${csvStr}
     runningCumB1 += s.b1Profit ?? 0;
     runningCumB2 += s.b2Profit ?? 0;
     runningCumD7 += s.d7Profit ?? 0;
+    runningCumP8 += s.p8Profit ?? 0;
     return {
       ...s,
       cumA: runningCumA,
@@ -194,6 +212,7 @@ ${csvStr}
       cumB1: runningCumB1,
       cumB2: runningCumB2,
       cumD7: runningCumD7,
+      cumP8: runningCumP8,
     };
   });
 
@@ -208,6 +227,15 @@ ${csvStr}
   const d7WinCount = d7History ? d7History.filter((r) => r.isWin).length : 0;
   const d7TotalBets = d7History ? d7History.length : 0;
   const d7WinRate = d7TotalBets > 0 ? ((d7WinCount / d7TotalBets) * 100).toFixed(1) : '0.0';
+
+  // Panda 8 History Summary Metrics
+  const totalP8Profit = p8History && p8History.length > 0
+    ? p8History.reduce((sum, r) => sum + r.netProfit, 0)
+    : runningCumP8;
+  const totalP8Wagered = p8History ? p8History.reduce((sum, r) => sum + r.betAmount, 0) : 0;
+  const p8WinCount = p8History ? p8History.filter((r) => r.isWin).length : 0;
+  const p8TotalBets = p8History ? p8History.length : 0;
+  const p8WinRate = p8TotalBets > 0 ? ((p8WinCount / p8TotalBets) * 100).toFixed(1) : '0.0';
 
   // Win Rates
   const aOverallWinRate = stats.aTotalHandsBet > 0 ? ((stats.aTotalWins / stats.aTotalHandsBet) * 100).toFixed(1) : '0.0';
@@ -239,13 +267,18 @@ ${csvStr}
 
   // All-Time Historical Cumulative Trend Points
   let runningD7HistoryCum = 0;
+  let runningP8HistoryCum = 0;
   const allTimePoints: TrendPoint[] = (trendPoints && trendPoints.length > 0)
     ? trendPoints
     : [
-        { handNumber: 0, aCum: 0, bCum: 0, b1Cum: 0, b2Cum: 0, d7Cum: 0 },
+        { handNumber: 0, aCum: 0, bCum: 0, b1Cum: 0, b2Cum: 0, d7Cum: 0, p8Cum: 0 },
         ...effectiveAllHands.map((h) => {
           if (h.aBet.dragon7Amount > 0) {
             runningD7HistoryCum += h.isDragon7 ? h.aBet.dragon7Amount * 40 : -h.aBet.dragon7Amount;
+          }
+          const p8Amt = h.aBet.panda8Amount || 0;
+          if (p8Amt > 0) {
+            runningP8HistoryCum += h.isPanda8 ? p8Amt * 25 : -p8Amt;
           }
           return {
             handNumber: h.handNumber,
@@ -254,6 +287,7 @@ ${csvStr}
             b1Cum: (h.b1BankrollAfter ?? 10000) - 10000,
             b2Cum: (h.b2BankrollAfter ?? 10000) - 10000,
             d7Cum: runningD7HistoryCum,
+            p8Cum: runningP8HistoryCum,
           };
         }),
       ];
@@ -276,6 +310,18 @@ ${csvStr}
   }
   const histMaxDDD7 = stats.d7MaxDrawdown ?? calcMaxD7DD;
 
+  // Compute Panda 8 Max Drawdown
+  let peakP8 = 0;
+  let runP8 = 0;
+  let calcMaxP8DD = 0;
+  for (const r of (p8History || [])) {
+    runP8 += r.netProfit;
+    if (runP8 > peakP8) peakP8 = runP8;
+    const dd = peakP8 - runP8;
+    if (dd > calcMaxP8DD) calcMaxP8DD = dd;
+  }
+  const histMaxDDP8 = stats.p8MaxDrawdown ?? calcMaxP8DD;
+
   // SVG Chart points
   const svgWidth = 600;
   const svgHeight = 130;
@@ -285,6 +331,7 @@ ${csvStr}
   let b1Path = '';
   let b2Path = '';
   let d7Path = '';
+  let p8Path = '';
   let zeroY = 65;
 
   if (allTimePoints.length > 1) {
@@ -303,6 +350,8 @@ ${csvStr}
       if ((p.b2Cum ?? 0) > maxCum) maxCum = p.b2Cum ?? 0;
       if ((p.d7Cum ?? 0) < minCum) minCum = p.d7Cum ?? 0;
       if ((p.d7Cum ?? 0) > maxCum) maxCum = p.d7Cum ?? 0;
+      if ((p.p8Cum ?? 0) < minCum) minCum = p.p8Cum ?? 0;
+      if ((p.p8Cum ?? 0) > maxCum) maxCum = p.p8Cum ?? 0;
     }
 
     const range = maxCum - minCum || 1;
@@ -324,6 +373,7 @@ ${csvStr}
     b1Path = samplePoints.map((d, i) => `${i === 0 ? 'M' : 'L'} ${((i / totalPts) * svgWidth).toFixed(1)} ${getSvgY(d.b1Cum ?? 0).toFixed(1)}`).join(' ');
     b2Path = samplePoints.map((d, i) => `${i === 0 ? 'M' : 'L'} ${((i / totalPts) * svgWidth).toFixed(1)} ${getSvgY(d.b2Cum ?? 0).toFixed(1)}`).join(' ');
     d7Path = samplePoints.map((d, i) => `${i === 0 ? 'M' : 'L'} ${((i / totalPts) * svgWidth).toFixed(1)} ${getSvgY(d.d7Cum ?? 0).toFixed(1)}`).join(' ');
+    p8Path = samplePoints.map((d, i) => `${i === 0 ? 'M' : 'L'} ${((i / totalPts) * svgWidth).toFixed(1)} ${getSvgY(d.p8Cum ?? 0).toFixed(1)}`).join(' ');
   }
 
   const recent10Hands = [...handResults].reverse().slice(0, 10);
@@ -438,7 +488,7 @@ ${csvStr}
       )}
 
       {/* GLOBAL SUMMARY STAT CARDS GRID */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 mb-4 font-sans text-xs">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 mb-4 font-sans text-xs">
         <div className="bg-black/75 p-2.5 rounded-xl border border-[#b8860b]/40">
           <span className="text-[10px] text-amber-200/70 block font-bold">总运行靴数/手数</span>
           <div className="flex items-baseline space-x-1 mt-0.5">
@@ -469,22 +519,36 @@ ${csvStr}
         <div className="bg-black/75 p-2.5 rounded-xl border border-yellow-500/40">
           <span className="text-[10px] text-yellow-200/80 block font-bold">止盈对家 (B-1 / B-2)</span>
           <div className="text-[10px] font-mono mt-0.5 space-y-0.5">
-            <div>B-1(止盈3注): <strong className={runningCumB1 >= 0 ? 'text-emerald-400' : 'text-red-400'}>{runningCumB1 >= 0 ? `+¥${runningCumB1}` : `-¥${Math.abs(runningCumB1)}`}</strong> (胜率{b1ChaseWinRate}%)</div>
-            <div>B-2(止盈2注): <strong className={runningCumB2 >= 0 ? 'text-emerald-400' : 'text-red-400'}>{runningCumB2 >= 0 ? `+¥${runningCumB2}` : `-¥${Math.abs(runningCumB2)}`}</strong> (胜率{b2ChaseWinRate}%)</div>
+            <div>B-1: <strong className={runningCumB1 >= 0 ? 'text-emerald-400' : 'text-red-400'}>{runningCumB1 >= 0 ? `+¥${runningCumB1}` : `-¥${Math.abs(runningCumB1)}`}</strong> ({b1ChaseWinRate}%)</div>
+            <div>B-2: <strong className={runningCumB2 >= 0 ? 'text-emerald-400' : 'text-red-400'}>{runningCumB2 >= 0 ? `+¥${runningCumB2}` : `-¥${Math.abs(runningCumB2)}`}</strong> ({b2ChaseWinRate}%)</div>
           </div>
         </div>
 
-        <div className="bg-black/75 p-2.5 rounded-xl border border-purple-500/40 col-span-2 sm:col-span-1">
+        <div className="bg-black/75 p-2.5 rounded-xl border border-purple-500/40">
           <span className="text-[10px] text-purple-200/90 block font-bold flex items-center gap-1">
             <span>🐉</span>
-            <span>龙7算牌侧注盈亏</span>
+            <span>龙7算牌侧注</span>
           </span>
           <span className={`text-base font-mono font-bold block ${totalD7Profit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
             {totalD7Profit >= 0 ? `+¥${totalD7Profit}` : `-¥${Math.abs(totalD7Profit)}`}
           </span>
           <div className="text-[9px] text-amber-200/60 font-mono mt-0.5 flex justify-between">
-            <span>命中: {d7WinRate}% ({d7WinCount}/{d7TotalBets})</span>
-            <span>资金: ¥{d7Bankroll}</span>
+            <span>命中: {d7WinRate}%</span>
+            <span>余: ¥{d7Bankroll}</span>
+          </div>
+        </div>
+
+        <div className="bg-black/75 p-2.5 rounded-xl border border-teal-500/40">
+          <span className="text-[10px] text-teal-200/90 block font-bold flex items-center gap-1">
+            <span>🐼</span>
+            <span>熊猫8算牌侧注</span>
+          </span>
+          <span className={`text-base font-mono font-bold block ${totalP8Profit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+            {totalP8Profit >= 0 ? `+¥${totalP8Profit}` : `-¥${Math.abs(totalP8Profit)}`}
+          </span>
+          <div className="text-[9px] text-teal-200/60 font-mono mt-0.5 flex justify-between">
+            <span>命中: {p8WinRate}%</span>
+            <span>余: ¥{p8Bankroll}</span>
           </div>
         </div>
       </div>
@@ -632,6 +696,7 @@ ${csvStr}
                     <th className="py-1.5 px-1.5">玩家B-1 (止盈3注)</th>
                     <th className="py-1.5 px-1.5">玩家B-2 (止盈2注)</th>
                     <th className="py-1.5 px-1.5 text-purple-300">🐉 龙7侧注 (当靴/累计)</th>
+                    <th className="py-1.5 px-1.5 text-teal-300">🐼 猫8侧注 (当靴/累计)</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -666,6 +731,7 @@ ${csvStr}
                         {renderProfitCell(shoe.b1Profit ?? 0, shoe.cumB1)}
                         {renderProfitCell(shoe.b2Profit ?? 0, shoe.cumB2)}
                         {renderProfitCell(shoe.d7Profit ?? 0, shoe.cumD7 ?? 0)}
+                        {renderProfitCell(shoe.p8Profit ?? 0, shoe.cumP8 ?? 0)}
                       </tr>
                     );
                   })}
@@ -694,6 +760,7 @@ ${csvStr}
                 { id: 'B-1', name: '玩家B-1 (止盈3注)', profit: runningCumB1, color: '#eab308', bgPos: 'from-yellow-600 to-yellow-400' },
                 { id: 'B-2', name: '玩家B-2 (止盈2注)', profit: runningCumB2, color: '#f59e0b', bgPos: 'from-amber-600 to-amber-400' },
                 { id: 'D7', name: '🐉 龙7侧注', profit: totalD7Profit, color: '#c084fc', bgPos: 'from-purple-600 to-fuchsia-400' },
+                { id: 'P8', name: '🐼 猫8侧注', profit: totalP8Profit, color: '#2dd4bf', bgPos: 'from-teal-600 to-emerald-400' },
               ];
 
               const maxAbs = Math.max(...playerData.map((p) => Math.abs(p.profit)), 500);
@@ -712,7 +779,7 @@ ${csvStr}
                         const heightPercent = Math.min(100, Math.max(6, (Math.abs(p.profit) / maxAbs) * 80));
 
                         return (
-                          <div key={p.id} className="relative flex flex-col items-center h-full w-1/5 max-w-[100px] z-10 group">
+                          <div key={p.id} className="relative flex flex-col items-center h-full w-1/6 max-w-[90px] z-10 group">
                             {/* Positive Bar Container (Top Half) */}
                             <div className="h-1/2 w-full flex flex-col justify-end items-center relative">
                               {isPos && (
@@ -722,7 +789,7 @@ ${csvStr}
                                   </span>
                                   <div
                                     style={{ height: `${heightPercent}%` }}
-                                    className={`w-full max-w-[44px] bg-gradient-to-t ${p.bgPos} rounded-t-md shadow-[0_0_10px_rgba(16,185,129,0.3)] transition-all duration-500`}
+                                    className={`w-full max-w-[40px] bg-gradient-to-t ${p.bgPos} rounded-t-md shadow-[0_0_10px_rgba(16,185,129,0.3)] transition-all duration-500`}
                                   />
                                 </>
                               )}
@@ -734,7 +801,7 @@ ${csvStr}
                                 <>
                                   <div
                                     style={{ height: `${heightPercent}%` }}
-                                    className="w-full max-w-[44px] bg-gradient-to-b from-red-600 to-rose-400 rounded-b-md shadow-[0_0_10px_rgba(239,68,68,0.3)] transition-all duration-500"
+                                    className="w-full max-w-[40px] bg-gradient-to-b from-red-600 to-rose-400 rounded-b-md shadow-[0_0_10px_rgba(239,68,68,0.3)] transition-all duration-500"
                                   />
                                   <span className="text-[10px] font-mono font-bold text-red-400 mt-1 transition-transform group-hover:scale-110">
                                     -¥{Math.abs(p.profit)}
@@ -745,7 +812,7 @@ ${csvStr}
 
                             {/* Bottom Label */}
                             <div className="absolute -bottom-7 text-center w-full">
-                              <span className="text-[11px] font-bold block truncate" style={{ color: p.color }}>
+                              <span className="text-[10px] sm:text-[11px] font-bold block truncate" style={{ color: p.color }}>
                                 {p.name}
                               </span>
                             </div>
@@ -756,9 +823,9 @@ ${csvStr}
                   </div>
 
                   {/* Summary Comparison Grid */}
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 pt-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 pt-2">
                     {playerData.map((p) => (
-                      <div key={p.id} className="bg-black/60 p-2.5 rounded-lg border border-[#b8860b]/20 flex items-center justify-between text-xs">
+                      <div key={p.id} className="bg-black/60 p-2 rounded-lg border border-[#b8860b]/20 flex items-center justify-between text-xs">
                         <span className="text-[11px] font-bold truncate mr-1" style={{ color: p.color }}>
                           {p.name}:
                         </span>
@@ -786,6 +853,7 @@ ${csvStr}
                 { name: '玩家B-1 (止盈3注)', winRate: parseFloat(b1ChaseWinRate), color: '#eab308', label: `${b1State?.chaseWins ?? 0}胜/${b1State?.chaseLosses ?? 0}负` },
                 { name: '玩家B-2 (止盈2注)', winRate: parseFloat(b2ChaseWinRate), color: '#f59e0b', label: `${b2State?.chaseWins ?? 0}胜/${b2State?.chaseLosses ?? 0}负` },
                 { name: '🐉 龙7侧注 (命中率)', winRate: parseFloat(d7WinRate), color: '#c084fc', label: `${d7WinCount}中/${d7TotalBets}手 (40:1)` },
+                { name: '🐼 熊猫8侧注 (命中率)', winRate: parseFloat(p8WinRate), color: '#2dd4bf', label: `${p8WinCount}中/${p8TotalBets}手 (25:1)` },
               ].map((item) => (
                 <div key={item.name} className="flex items-center text-xs space-x-3">
                   <span className="w-36 font-bold text-amber-100 text-[11px] truncate" style={{ color: item.color }}>
@@ -837,6 +905,7 @@ ${csvStr}
                 <path d={b1Path} fill="none" stroke="#eab308" strokeWidth="1.5" strokeDasharray="4 2" />
                 <path d={b2Path} fill="none" stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="2 2" />
                 <path d={d7Path} fill="none" stroke="#c084fc" strokeWidth="2" strokeDasharray="3 1" />
+                <path d={p8Path} fill="none" stroke="#2dd4bf" strokeWidth="2" strokeDasharray="2 2" />
               </svg>
             ) : (
               <div className="h-24 flex items-center justify-center text-amber-200/50 text-xs font-serif-casino">
@@ -850,6 +919,7 @@ ${csvStr}
               <span className="text-yellow-400">╍ 玩家B-1 (止盈3注)</span>
               <span className="text-amber-400">┈ 玩家B-2 (止盈2注)</span>
               <span className="text-purple-300">╌ 🐉 龙7算牌侧注</span>
+              <span className="text-teal-300">╌ 🐼 熊猫8算牌侧注</span>
             </div>
           </div>
 
@@ -859,7 +929,7 @@ ${csvStr}
               <span className="text-amber-200/90 font-bold">📉 历史全过程最大回撤 (Historical Max Drawdown):</span>
               <span className="text-[10px] text-amber-200/50">* 从历史峰值资金下跌的最大幅度</span>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 font-mono text-[11px]">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 font-mono text-[11px]">
               <div className="bg-black/50 p-2.5 rounded border border-amber-500/20 text-center">
                 <span className="text-[#d4af37] block text-[10px] font-sans">玩家A</span>
                 <strong className="text-red-400">¥{histMaxDDA.toLocaleString()}</strong>
@@ -880,6 +950,10 @@ ${csvStr}
                 <span className="text-purple-300 block text-[10px] font-sans">🐉 龙7侧注</span>
                 <strong className="text-red-400">¥{histMaxDDD7.toLocaleString()}</strong>
               </div>
+              <div className="bg-black/50 p-2.5 rounded border border-teal-500/30 text-center">
+                <span className="text-teal-300 block text-[10px] font-sans">🐼 猫8侧注</span>
+                <strong className="text-red-400">¥{histMaxDDP8.toLocaleString()}</strong>
+              </div>
             </div>
           </div>
         </div>
@@ -893,7 +967,7 @@ ${csvStr}
               <div className="flex items-center justify-between text-xs mb-2 border-b border-[#b8860b]/20 pb-1.5">
                 <span className="text-amber-200 font-bold">📜 近期对局资金变动明细 (最新10手)</span>
               </div>
-              <table className="w-full text-left text-xs text-amber-100/90 font-mono border-collapse min-w-[650px]">
+              <table className="w-full text-left text-xs text-amber-100/90 font-mono border-collapse min-w-[720px]">
                 <thead>
                   <tr className="border-b border-[#b8860b]/30 text-[10px] text-amber-200/60 font-sans">
                     <th className="py-1 px-1.5">手数</th>
@@ -903,6 +977,7 @@ ${csvStr}
                     <th className="py-1 px-1.5">B-1 盈亏</th>
                     <th className="py-1 px-1.5">B-2 盈亏</th>
                     <th className="py-1 px-1.5 text-purple-300">🐉 龙7侧注</th>
+                    <th className="py-1 px-1.5 text-teal-300">🐼 猫8侧注</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -940,6 +1015,15 @@ ${csvStr}
                           {h.aBet.dragon7Amount > 0 ? (
                             <span className={h.isDragon7 ? 'text-yellow-300 font-bold' : 'text-zinc-400'}>
                               ¥{h.aBet.dragon7Amount} ({h.isDragon7 ? `+¥${h.aBet.dragon7Amount * 40}` : `-¥${h.aBet.dragon7Amount}`})
+                            </span>
+                          ) : (
+                            <span className="text-zinc-600 text-[10px]">观望</span>
+                          )}
+                        </td>
+                        <td className="py-1 px-1.5">
+                          {(h.aBet.panda8Amount || 0) > 0 ? (
+                            <span className={h.isPanda8 ? 'text-teal-300 font-bold' : 'text-zinc-400'}>
+                              ¥{h.aBet.panda8Amount} ({h.isPanda8 ? `+¥${(h.aBet.panda8Amount || 0) * 25}` : `-¥${h.aBet.panda8Amount}`})
                             </span>
                           ) : (
                             <span className="text-zinc-600 text-[10px]">观望</span>

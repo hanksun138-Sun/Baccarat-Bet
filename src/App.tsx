@@ -21,6 +21,9 @@ import {
   ShoeRecord,
   TrendPoint,
   initialD7Stats,
+  Panda8BetRecord,
+  Panda8Settings,
+  defaultPanda8Settings,
 } from './types';
 import {
   calculateHandScore,
@@ -37,6 +40,11 @@ import {
   calculateDragon7TrueCount,
   formatCardsCompact,
 } from './utils/dragon7';
+import {
+  calculatePanda8Advantage,
+  calculatePanda8RunningCount,
+  calculatePanda8TrueCount,
+} from './utils/panda8';
 import { downloadStandaloneHtmlFile } from './utils/exportSingleFileHtml';
 import { recalculateFullHistory } from './utils/recalculateHistory';
 
@@ -143,6 +151,11 @@ export default function App() {
   const [d7History, setD7History] = useState<Dragon7BetRecord[]>([]);
   const [d7Bankroll, setD7Bankroll] = useState<number>(10000);
 
+  // Panda 8 Card Counting Assistant State
+  const [p8Settings, setP8Settings] = useState<Panda8Settings>(defaultPanda8Settings);
+  const [p8History, setP8History] = useState<Panda8BetRecord[]>([]);
+  const [p8Bankroll, setP8Bankroll] = useState<number>(10000);
+
   // Initialize or Load from LocalStorage
   useEffect(() => {
     const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -201,6 +214,10 @@ export default function App() {
         if (parsed.d7History) setD7History(parsed.d7History);
         if (parsed.d7Bankroll !== undefined) setD7Bankroll(parsed.d7Bankroll);
 
+        if (parsed.p8Settings) setP8Settings(parsed.p8Settings);
+        if (parsed.p8History) setP8History(parsed.p8History);
+        if (parsed.p8Bankroll !== undefined) setP8Bankroll(parsed.p8Bankroll);
+
         if (parsed.trendPoints) {
           setTrendPoints(parsed.trendPoints);
         } else if (handsForInit.length > 0) {
@@ -246,6 +263,9 @@ export default function App() {
           d7Settings,
           d7History: d7History.slice(-500),
           d7Bankroll,
+          p8Settings,
+          p8History: p8History.slice(-500),
+          p8Bankroll,
         };
 
         try {
@@ -276,6 +296,9 @@ export default function App() {
     d7Settings,
     d7History,
     d7Bankroll,
+    p8Settings,
+    p8History,
+    p8Bankroll,
   ]);
 
   // Synchronize Dragon 7 auto-bet when auto-bet is enabled and system is idle
@@ -290,8 +313,9 @@ export default function App() {
         d7Settings.fixedUnitAmount,
         d7Bankroll
       );
-      const targetBet = adv.shouldBet ? adv.suggestedBet : 0;
-      setABet((prev) => (prev.dragon7Amount !== targetBet ? { ...prev, dragon7Amount: targetBet } : prev));
+      if (adv.shouldBet) {
+        setABet((prev) => (prev.dragon7Amount !== adv.suggestedBet ? { ...prev, dragon7Amount: adv.suggestedBet } : prev));
+      }
     }
   }, [
     d7Settings.isAutoBetEnabled,
@@ -299,6 +323,33 @@ export default function App() {
     d7Settings.betMode,
     d7Settings.fixedUnitAmount,
     d7Bankroll,
+    handResults.length,
+    shoe.length,
+    isDealing,
+  ]);
+
+  // Synchronize Panda 8 auto-bet when auto-bet is enabled and system is idle
+  useEffect(() => {
+    if (p8Settings.isAutoBetEnabled && !isDealing && shoe.length > 0) {
+      const rc = calculatePanda8RunningCount(handResults, burnCard);
+      const tc = calculatePanda8TrueCount(rc.rc, shoe.length, 416);
+      const adv = calculatePanda8Advantage(
+        tc.tc,
+        p8Settings.threshold,
+        p8Settings.betMode,
+        p8Settings.fixedUnitAmount,
+        p8Bankroll
+      );
+      if (adv.shouldBet) {
+        setABet((prev) => (prev.panda8Amount !== adv.suggestedBet ? { ...prev, panda8Amount: adv.suggestedBet } : prev));
+      }
+    }
+  }, [
+    p8Settings.isAutoBetEnabled,
+    p8Settings.threshold,
+    p8Settings.betMode,
+    p8Settings.fixedUnitAmount,
+    p8Bankroll,
     handResults.length,
     shoe.length,
     isDealing,
@@ -343,6 +394,12 @@ export default function App() {
         }
         return sum;
       }, 0);
+      const p8Profit = handResults.reduce((sum, h) => {
+        if (h.aBet.panda8Amount > 0) {
+          return sum + (h.isPanda8 ? h.aBet.panda8Amount * 25 : -h.aBet.panda8Amount);
+        }
+        return sum;
+      }, 0);
 
       const bankerWins = handResults.filter((h) => h.winner === 'BANKER').length;
       const playerWins = handResults.filter((h) => h.winner === 'PLAYER').length;
@@ -359,6 +416,7 @@ export default function App() {
         b1Profit,
         b2Profit,
         d7Profit,
+        p8Profit,
         bankerWins,
         playerWins,
         ties,
@@ -369,6 +427,7 @@ export default function App() {
         b1BankrollEnd: b1Bankroll,
         b2BankrollEnd: b2Bankroll,
         d7BankrollEnd: d7Bankroll,
+        p8BankrollEnd: p8Bankroll,
         timestamp: Date.now(),
       };
 
@@ -642,10 +701,27 @@ export default function App() {
       d7Bankroll
     );
 
-    // Determine actual Dragon 7 bet amount (supports auto-bet when threshold is reached)
+    // Current Panda 8 Count & Advice before deal
+    const currentP8RCDetails = calculatePanda8RunningCount(handResults, burnCard);
+    const currentP8TCDetails = calculatePanda8TrueCount(currentP8RCDetails.rc, shoe.length, 416);
+    const currentP8Advice = calculatePanda8Advantage(
+      currentP8TCDetails.tc,
+      p8Settings.threshold,
+      p8Settings.betMode,
+      p8Settings.fixedUnitAmount,
+      p8Bankroll
+    );
+
+    // Determine actual Dragon 7 bet amount (Never wipe user's manual bet! Supports auto-bet when threshold is reached)
     let effectiveD7Bet = aBet.dragon7Amount;
-    if (d7Settings.isAutoBetEnabled) {
-      effectiveD7Bet = currentD7Advice.shouldBet ? currentD7Advice.suggestedBet : 0;
+    if (effectiveD7Bet <= 0 && d7Settings.isAutoBetEnabled && currentD7Advice.shouldBet) {
+      effectiveD7Bet = currentD7Advice.suggestedBet;
+    }
+
+    // Determine actual Panda 8 bet amount (Never wipe user's manual bet! Supports auto-bet when threshold is reached)
+    let effectiveP8Bet = aBet.panda8Amount;
+    if (effectiveP8Bet <= 0 && p8Settings.isAutoBetEnabled && currentP8Advice.shouldBet) {
+      effectiveP8Bet = currentP8Advice.suggestedBet;
     }
 
     // Deal Cards from Shoe
@@ -689,13 +765,13 @@ export default function App() {
       }
     }
 
-    // Side Bets Payout (with effective Dragon 7 bet)
+    // Side Bets Payout (with effective Dragon 7 and Panda 8 bets)
     let aSidePayout = 0;
     if (effectiveD7Bet > 0) {
       aSidePayout += isDragon7 ? effectiveD7Bet * 40 : -effectiveD7Bet;
     }
-    if (aBet.panda8Amount > 0) {
-      aSidePayout += isPanda8 ? aBet.panda8Amount * 25 : -aBet.panda8Amount;
+    if (effectiveP8Bet > 0) {
+      aSidePayout += isPanda8 ? effectiveP8Bet * 25 : -effectiveP8Bet;
     }
 
     const aNetProfit = aMainPayout + aSidePayout;
@@ -762,7 +838,7 @@ export default function App() {
       isPanda8,
       isDragon7Push,
 
-      aBet: { ...aBet, dragon7Amount: effectiveD7Bet },
+      aBet: { ...aBet, dragon7Amount: effectiveD7Bet, panda8Amount: effectiveP8Bet },
       aMainResult,
       aMainPayout,
       aSidePayout,
@@ -837,6 +913,46 @@ export default function App() {
       setD7History((prev) => [...prev, d7Record]);
     }
 
+    // Record Panda 8 Bet Tracking Record
+    if (effectiveP8Bet > 0) {
+      const p8Net = isPanda8 ? effectiveP8Bet * 25 : -effectiveP8Bet;
+      const newP8Bankroll = Math.max(0, p8Bankroll + p8Net);
+      setP8Bankroll(newP8Bankroll);
+
+      const prevShoeProfitP8 = handResults.reduce((sum, h) => {
+        if (h.aBet.panda8Amount > 0) {
+          return sum + (h.isPanda8 ? h.aBet.panda8Amount * 25 : -h.aBet.panda8Amount);
+        }
+        return sum;
+      }, 0);
+      const shoeProfitAfter = prevShoeProfitP8 + p8Net;
+
+      const prevCumP8 = p8History.length > 0 ? p8History[p8History.length - 1].cumulativeProfitAfter : 0;
+      const cumulativeProfitAfter = prevCumP8 + p8Net;
+
+      const p8Record: Panda8BetRecord = {
+        id: `p8_${newHandNum}_${Date.now()}`,
+        handNumber: newHandNum,
+        shoeNumber: shoeHistory.length + 1,
+        shoeHandNumber: newShoeHandNum,
+        rc: currentP8RCDetails.rc,
+        tc: currentP8TCDetails.tc,
+        betAmount: effectiveP8Bet,
+        isWin: isPanda8,
+        payout: isPanda8 ? effectiveP8Bet * 25 : 0,
+        netProfit: p8Net,
+        shoeProfitAfter,
+        cumulativeProfitAfter,
+        bankrollAfter: newP8Bankroll,
+        bankerCardsStr: formatCardsCompact(bCards),
+        playerCardsStr: formatCardsCompact(pCards),
+        isPanda8,
+        timestamp: Date.now(),
+      };
+
+      setP8History((prev) => [...prev, p8Record]);
+    }
+
     // Update States
     setPlayerCards(pCards);
     setBankerCards(bCards);
@@ -845,22 +961,32 @@ export default function App() {
     setB1Bankroll(b1Res.bankrollAfter);
     setB2Bankroll(b2Res.bankrollAfter);
 
-    // Calculate Next Hand's count and advice for Auto Bet
-    const nextRCDetails = calculateDragon7RunningCount([...handResults, handRes], burnCard, d7Settings.countingSystem);
-    const nextTCDetails = calculateDragon7TrueCount(nextRCDetails.rc, remainingShoe.length, 416);
+    // Calculate Next Hand's count and advice for Auto Bet (Both Dragon 7 & Panda 8)
+    const nextRCDetailsD7 = calculateDragon7RunningCount([...handResults, handRes], burnCard, d7Settings.countingSystem);
+    const nextTCDetailsD7 = calculateDragon7TrueCount(nextRCDetailsD7.rc, remainingShoe.length, 416);
     const nextD7Advice = calculateDragon7Advantage(
-      nextTCDetails.tc,
+      nextTCDetailsD7.tc,
       d7Settings.threshold,
       d7Settings.betMode,
       d7Settings.fixedUnitAmount,
       d7Bankroll
     );
 
+    const nextRCDetailsP8 = calculatePanda8RunningCount([...handResults, handRes], burnCard);
+    const nextTCDetailsP8 = calculatePanda8TrueCount(nextRCDetailsP8.rc, remainingShoe.length, 416);
+    const nextP8Advice = calculatePanda8Advantage(
+      nextTCDetailsP8.tc,
+      p8Settings.threshold,
+      p8Settings.betMode,
+      p8Settings.fixedUnitAmount,
+      p8Bankroll
+    );
+
     setABet({
       mainBet: null,
       mainAmount: settings.aDefaultBet,
       dragon7Amount: d7Settings.isAutoBetEnabled && nextD7Advice.shouldBet ? nextD7Advice.suggestedBet : 0,
-      panda8Amount: 0,
+      panda8Amount: p8Settings.isAutoBetEnabled && nextP8Advice.shouldBet ? nextP8Advice.suggestedBet : 0,
     });
 
     setBState({
@@ -907,6 +1033,10 @@ export default function App() {
     const prevD7Cum = d7History.length > 0 ? d7History[d7History.length - 1].cumulativeProfitAfter : 0;
     const currentD7Cum = prevD7Cum + latestD7Net;
 
+    const latestP8Net = effectiveP8Bet > 0 ? (isPanda8 ? effectiveP8Bet * 25 : -effectiveP8Bet) : 0;
+    const prevP8Cum = p8History.length > 0 ? p8History[p8History.length - 1].cumulativeProfitAfter : 0;
+    const currentP8Cum = prevP8Cum + latestP8Net;
+
     const newTrendPt: TrendPoint = {
       handNumber: newHandNum,
       aCum: aBankrollAfter - 1000,
@@ -914,6 +1044,7 @@ export default function App() {
       b1Cum: (b1Res.bankrollAfter ?? 10000) - 10000,
       b2Cum: (b2Res.bankrollAfter ?? 10000) - 10000,
       d7Cum: currentD7Cum,
+      p8Cum: currentP8Cum,
     };
 
     setTrendPoints((prev) => {
@@ -967,6 +1098,10 @@ export default function App() {
       const d7MaxBankroll = Math.max(prev.d7MaxBankroll ?? 10000, latestD7Bankroll);
       const d7MaxDrawdown = Math.max(prev.d7MaxDrawdown ?? 0, d7MaxBankroll - latestD7Bankroll);
 
+      const latestP8Bankroll = effectiveP8Bet > 0 ? (isPanda8 ? p8Bankroll + effectiveP8Bet * 25 : p8Bankroll - effectiveP8Bet) : p8Bankroll;
+      const p8MaxBankroll = Math.max(prev.p8MaxBankroll ?? 10000, latestP8Bankroll);
+      const p8MaxDrawdown = Math.max(prev.p8MaxDrawdown ?? 0, p8MaxBankroll - latestP8Bankroll);
+
       return {
         aTotalHandsBet,
         aTotalWins,
@@ -988,6 +1123,8 @@ export default function App() {
         b2MaxDrawdown,
         d7MaxBankroll,
         d7MaxDrawdown,
+        p8MaxBankroll,
+        p8MaxDrawdown,
       };
     });
 
@@ -1180,7 +1317,7 @@ export default function App() {
               />
             </div>
 
-            {/* Right ~40%: Big Road & Dragon 7 Card Counting Assistant */}
+            {/* Right ~40%: Big Road & Dragon 7 / Panda 8 Card Counting Assistant */}
             <div className="lg:col-span-2">
               <BigRoad
                 handResults={handResults}
@@ -1188,14 +1325,22 @@ export default function App() {
                 burnedCount={burnedCount}
                 remainingCards={shoe.length}
                 currentD7Bet={aBet.dragon7Amount}
+                currentP8Bet={aBet.panda8Amount}
                 isDealing={isDealing}
                 d7Settings={d7Settings}
                 d7History={d7History}
                 d7Bankroll={d7Bankroll}
+                p8Settings={p8Settings}
+                p8History={p8History}
+                p8Bankroll={p8Bankroll}
                 onUpdateSettings={setD7Settings}
                 onSetD7Bet={(amt) => setABet((prev) => ({ ...prev, dragon7Amount: amt }))}
                 onUpdateBankroll={setD7Bankroll}
                 onClearHistory={() => setD7History([])}
+                onUpdateP8Settings={setP8Settings}
+                onSetP8Bet={(amt) => setABet((prev) => ({ ...prev, panda8Amount: amt }))}
+                onUpdateP8Bankroll={setP8Bankroll}
+                onClearP8History={() => setP8History([])}
               />
             </div>
           </div>
@@ -1241,6 +1386,8 @@ export default function App() {
             b2Bankroll={b2Bankroll}
             d7Bankroll={d7Bankroll}
             d7History={d7History}
+            p8Bankroll={p8Bankroll}
+            p8History={p8History}
             botTakeProfitResetMode={settings.botTakeProfitResetMode}
             onToggleResetMode={handleToggleResetMode}
             onResetSession={handleResetSession}

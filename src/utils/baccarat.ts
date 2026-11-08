@@ -357,6 +357,9 @@ export function exportToCSV(results: HandResult[]): string {
     'Dragon 7 Bet Amt',
     'Dragon 7 Hand Profit',
     'Dragon 7 Cumulative Profit',
+    'Panda 8 Bet Amt',
+    'Panda 8 Hand Profit',
+    'Panda 8 Cumulative Profit',
   ];
 
   let cumA = 0;
@@ -364,6 +367,7 @@ export function exportToCSV(results: HandResult[]): string {
   let cumB1 = 0;
   let cumB2 = 0;
   let cumD7 = 0;
+  let cumP8 = 0;
 
   const rows = results.map((r) => {
     cumA += r.aNetProfit;
@@ -373,6 +377,10 @@ export function exportToCSV(results: HandResult[]): string {
     const d7Amt = r.aBet.dragon7Amount || 0;
     const d7Profit = d7Amt > 0 ? (r.isDragon7 ? d7Amt * 40 : -d7Amt) : 0;
     cumD7 += d7Profit;
+
+    const p8Amt = r.aBet.panda8Amount || 0;
+    const p8Profit = p8Amt > 0 ? (r.isPanda8 ? p8Amt * 25 : -p8Amt) : 0;
+    cumP8 += p8Profit;
 
     const b1Status = r.b1TakeProfitStoppedAfter ? '已止盈' : r.b1WasChasing ? '追打中' : '观望中';
     const b2Status = r.b2TakeProfitStoppedAfter ? '已止盈' : r.b2WasChasing ? '追打中' : '观望中';
@@ -415,6 +423,9 @@ export function exportToCSV(results: HandResult[]): string {
       d7Amt,
       d7Profit,
       cumD7,
+      p8Amt,
+      p8Profit,
+      cumP8,
     ];
   });
 

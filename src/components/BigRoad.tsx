@@ -1,5 +1,13 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { BigRoadCell, Card, Dragon7BetRecord, Dragon7Settings, HandResult } from '../types';
+import {
+  BigRoadCell,
+  Card,
+  Dragon7BetRecord,
+  Dragon7Settings,
+  HandResult,
+  Panda8BetRecord,
+  Panda8Settings,
+} from '../types';
 import { buildBigRoad } from '../utils/baccarat';
 import { Dragon7Counter } from './Dragon7Counter';
 
@@ -9,14 +17,22 @@ interface BigRoadProps {
   burnedCount?: number;
   remainingCards?: number;
   currentD7Bet?: number;
+  currentP8Bet?: number;
   isDealing?: boolean;
   d7Settings: Dragon7Settings;
   d7History: Dragon7BetRecord[];
   d7Bankroll: number;
+  p8Settings?: Panda8Settings;
+  p8History?: Panda8BetRecord[];
+  p8Bankroll?: number;
   onUpdateSettings: (newSettings: Dragon7Settings) => void;
   onSetD7Bet: (amount: number) => void;
   onUpdateBankroll: (newBankroll: number) => void;
   onClearHistory: () => void;
+  onUpdateP8Settings?: (newSettings: Panda8Settings) => void;
+  onSetP8Bet?: (amount: number) => void;
+  onUpdateP8Bankroll?: (newBankroll: number) => void;
+  onClearP8History?: () => void;
 }
 
 export const BigRoad: React.FC<BigRoadProps> = ({
@@ -25,14 +41,22 @@ export const BigRoad: React.FC<BigRoadProps> = ({
   burnedCount = 0,
   remainingCards = 416,
   currentD7Bet = 0,
+  currentP8Bet = 0,
   isDealing = false,
   d7Settings,
   d7History,
   d7Bankroll,
+  p8Settings,
+  p8History = [],
+  p8Bankroll = 10000,
   onUpdateSettings,
   onSetD7Bet,
   onUpdateBankroll,
   onClearHistory,
+  onUpdateP8Settings,
+  onSetP8Bet,
+  onUpdateP8Bankroll,
+  onClearP8History,
 }) => {
   const [activeTab, setActiveTab] = useState<'both' | 'big' | 'dragon7' | 'history'>('both');
   const [showHistoryTable, setShowHistoryTable] = useState<boolean>(true);
@@ -224,7 +248,7 @@ export const BigRoad: React.FC<BigRoadProps> = ({
           </div>
         )}
 
-        {/* DRAGON 7 CARD COUNTING ASSISTANT (原盘珠路区域已替换为龙7算牌辅助程序) */}
+        {/* SIDE BETS CARD COUNTING ASSISTANT (龙7与熊猫8双独立算牌系统) */}
         {(activeTab === 'both' || activeTab === 'dragon7') && (
           <div>
             <Dragon7Counter
@@ -233,14 +257,22 @@ export const BigRoad: React.FC<BigRoadProps> = ({
               burnedCount={burnedCount}
               remainingCards={remainingCards}
               currentD7Bet={currentD7Bet}
+              currentP8Bet={currentP8Bet}
               isDealing={isDealing}
               d7Settings={d7Settings}
               d7History={d7History}
               d7Bankroll={d7Bankroll}
+              p8Settings={p8Settings}
+              p8History={p8History}
+              p8Bankroll={p8Bankroll}
               onUpdateSettings={onUpdateSettings}
               onSetD7Bet={onSetD7Bet}
               onUpdateBankroll={onUpdateBankroll}
               onClearHistory={onClearHistory}
+              onUpdateP8Settings={onUpdateP8Settings}
+              onSetP8Bet={onSetP8Bet}
+              onUpdateP8Bankroll={onUpdateP8Bankroll}
+              onClearP8History={onClearP8History}
             />
           </div>
         )}
@@ -274,7 +306,7 @@ export const BigRoad: React.FC<BigRoadProps> = ({
                   暂无对局明细记录 (点击左侧【开牌 DEAL】或【自动模拟】产生数据)
                 </div>
               ) : (
-                <table className="w-full text-left text-[11px] font-mono border-collapse min-w-[500px]">
+                <table className="w-full text-left text-[11px] font-mono border-collapse min-w-[550px]">
                   <thead>
                     <tr className="border-b border-[#b8860b]/40 text-amber-300 font-bold bg-[#051a0b]/80">
                       <th className="py-1 px-1.5">序号</th>
@@ -282,6 +314,7 @@ export const BigRoad: React.FC<BigRoadProps> = ({
                       <th className="py-1 px-1.5">点数</th>
                       <th className="py-1 px-1.5">特殊牌型</th>
                       <th className="py-1 px-1.5">龙7下注</th>
+                      <th className="py-1 px-1.5">猫8下注</th>
                       <th className="py-1 px-1.5">玩家A净利</th>
                       <th className="py-1 px-1.5">玩家B净利</th>
                     </tr>
@@ -329,6 +362,15 @@ export const BigRoad: React.FC<BigRoadProps> = ({
                               {hand.aBet.dragon7Amount > 0 ? (
                                 <span className={`font-bold ${hand.isDragon7 ? 'text-yellow-400' : 'text-zinc-400'}`}>
                                   ¥{hand.aBet.dragon7Amount} {hand.isDragon7 ? '(中+¥' + (hand.aBet.dragon7Amount * 40) + ')' : ''}
+                                </span>
+                              ) : (
+                                <span className="text-zinc-600">-</span>
+                              )}
+                            </td>
+                            <td className="py-1 px-1.5">
+                              {hand.aBet.panda8Amount > 0 ? (
+                                <span className={`font-bold ${hand.isPanda8 ? 'text-blue-300' : 'text-zinc-400'}`}>
+                                  ¥{hand.aBet.panda8Amount} {hand.isPanda8 ? '(中+¥' + (hand.aBet.panda8Amount * 25) + ')' : ''}
                                 </span>
                               ) : (
                                 <span className="text-zinc-600">-</span>

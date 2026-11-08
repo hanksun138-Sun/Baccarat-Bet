@@ -503,6 +503,26 @@ export const TableFelt: React.FC<TableFeltProps> = ({
                 </span>
               </div>
             )}
+            {lastHandResult.aBet.dragon7Amount > 0 && (
+              <div className="flex items-center space-x-1 border-l border-[#b8860b]/40 pl-2">
+                <span className="text-amber-300">🐉 龙7:</span>
+                <span className={`font-mono font-bold ${lastHandResult.isDragon7 ? 'text-yellow-300' : 'text-red-400'}`}>
+                  {lastHandResult.isDragon7
+                    ? `+¥${lastHandResult.aBet.dragon7Amount * 40} (中40倍!)`
+                    : `-¥${lastHandResult.aBet.dragon7Amount}`}
+                </span>
+              </div>
+            )}
+            {lastHandResult.aBet.panda8Amount > 0 && (
+              <div className="flex items-center space-x-1 border-l border-blue-500/40 pl-2">
+                <span className="text-cyan-300">🐼 猫8:</span>
+                <span className={`font-mono font-bold ${lastHandResult.isPanda8 ? 'text-cyan-300' : 'text-red-400'}`}>
+                  {lastHandResult.isPanda8
+                    ? `+¥${lastHandResult.aBet.panda8Amount * 25} (中25倍!)`
+                    : `-¥${lastHandResult.aBet.panda8Amount}`}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       )}

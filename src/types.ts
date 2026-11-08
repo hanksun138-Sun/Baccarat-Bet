@@ -108,6 +108,7 @@ export interface ShoeRecord {
   b1Profit?: number;
   b2Profit?: number;
   d7Profit?: number;
+  p8Profit?: number;
   bankerWins: number;
   playerWins: number;
   ties: number;
@@ -118,6 +119,7 @@ export interface ShoeRecord {
   b1BankrollEnd?: number;
   b2BankrollEnd?: number;
   d7BankrollEnd?: number;
+  p8BankrollEnd?: number;
   timestamp: number;
 }
 
@@ -176,6 +178,8 @@ export interface GameStats {
   b2MaxDrawdown?: number;
   d7MaxBankroll?: number;
   d7MaxDrawdown?: number;
+  p8MaxBankroll?: number;
+  p8MaxDrawdown?: number;
 }
 
 export interface D7Stats {
@@ -205,6 +209,7 @@ export interface TrendPoint {
   b1Cum: number;
   b2Cum: number;
   d7Cum?: number;
+  p8Cum?: number;
 }
 
 export const initialD7Stats: D7Stats = {
@@ -276,4 +281,55 @@ export interface Dragon7AssistantStats {
   lossBets: number; // 未中次数
   currentShoeProfit: number; // 当牌靴盈亏
 }
+
+// ==================== Panda 8 (熊猫8) 算牌辅助系统类型 ====================
+export type Panda8BetMode = 'FIXED' | 'HALF_KELLY' | 'FULL_KELLY';
+
+export interface Panda8Settings {
+  threshold: number; // 默认 +11.0 (True Count 阈值)
+  betMode: Panda8BetMode; // 'FIXED' | 'HALF_KELLY' | 'FULL_KELLY'
+  fixedUnitAmount: number; // 自定义固定单位下注金额 (默认 100)
+  isAutoBetEnabled: boolean; // 是否开启系统自动下注
+  initialBankroll: number; // 熊猫8专职起始资金 (默认 10000)
+}
+
+export const defaultPanda8Settings: Panda8Settings = {
+  threshold: 11.0,
+  betMode: 'FIXED',
+  fixedUnitAmount: 100,
+  isAutoBetEnabled: false,
+  initialBankroll: 10000,
+};
+
+export interface Panda8BetRecord {
+  id: string;
+  handNumber: number; // 会话总手号
+  shoeNumber: number; // 牌靴号
+  shoeHandNumber: number; // 当前靴内手号
+  rc: number; // 跑动计数 (Running Count)
+  tc: number; // 真数 (True Count)
+  betAmount: number; // 下注金额
+  isWin: boolean; // 是否命中熊猫8
+  payout: number; // 派彩 (25:1)
+  netProfit: number; // 单手净盈亏 (+25*bet 或 -bet)
+  shoeProfitAfter: number; // 结算后当前靴累计盈亏
+  cumulativeProfitAfter: number; // 结算后历史总累计盈亏
+  bankrollAfter: number; // 结算后熊猫8专职资金
+  bankerCardsStr: string;
+  playerCardsStr: string;
+  isPanda8: boolean;
+  timestamp: number;
+}
+
+export interface Panda8AssistantStats {
+  totalWagered: number;
+  sessionProfit: number;
+  cumulativeProfit: number;
+  currentBankroll: number;
+  totalBets: number;
+  winBets: number;
+  lossBets: number;
+  currentShoeProfit: number;
+}
+
 
