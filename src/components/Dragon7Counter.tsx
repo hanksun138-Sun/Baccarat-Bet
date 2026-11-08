@@ -167,7 +167,8 @@ export const Dragon7Counter: React.FC<Dragon7CounterProps> = ({
       {/* ========================================================================= */}
       {/* MAIN TWO-COLUMN SIMULTANEOUS LAYOUT                                       */}
       {/* ========================================================================= */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-3.5">
+      {/* Dual Counting System Container: Left Dragon 7, Right Panda 8 (Side-by-side on iPad/Desktop) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
         {/* ======================================================================= */}
         {/* LEFT COLUMN: 🐉 DRAGON 7 (龙7) 算牌系统                                 */}
         {/* ======================================================================= */}

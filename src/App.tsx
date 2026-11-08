@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { TableFelt } from './components/TableFelt';
+import { Dragon7Counter } from './components/Dragon7Counter';
+import { BettingConsole } from './components/BettingConsole';
 import { PlayerBStatus } from './components/PlayerBStatus';
 import { BigRoad } from './components/BigRoad';
 import { StatsPanel } from './components/StatsPanel';
@@ -1287,17 +1289,16 @@ export default function App() {
 
         {/* Main Screen Layout */}
         <div className="space-y-4 md:space-y-5">
-          {/* iPad Top Screen Grid */}
+          {/* iPad & Desktop Top Screen Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 md:gap-5 items-start">
-            {/* Left ~60%: Main Gaming Table */}
-            <div className="lg:col-span-3">
+            {/* Left ~60%: Main Gaming Table Felt & Dragon-Panda Dual Counter (左右区分) */}
+            <div className="lg:col-span-3 space-y-3 sm:space-y-4">
               <TableFelt
                 playerCards={playerCards}
                 bankerCards={bankerCards}
                 playerScore={calculateHandScore(playerCards)}
                 bankerScore={calculateHandScore(bankerCards)}
                 isDealing={isDealing}
-                lastHandResult={lastHandResult}
                 aBet={aBet}
                 bBet={getBotBet(bState, aBankroll === 0 ? settings.bPostExhaustionChaseBet : settings.bChaseBet, aBet.mainBet)}
                 burnCard={burnCard}
@@ -1306,20 +1307,11 @@ export default function App() {
                 totalCards={416}
                 aBankroll={aBankroll}
                 aCumulativeProfit={handResults.length > 0 ? (handResults[handResults.length - 1].aCumulativeProfit ?? 0) : 0}
-                enableSideBets={settings.aEnableSideBets}
-                sideBetAmount={settings.sideBetAmount}
-                onDeal={handleDealNextHand}
-                onUpdateBet={setABet}
-                onNewShoe={handleNewShoe}
-                onResetSession={handleResetSession}
                 onOpenRecharge={() => setRechargePlayer('A')}
-                onOpenSettings={() => setIsSettingsOpen(true)}
               />
-            </div>
 
-            {/* Right ~40%: Big Road & Dragon 7 / Panda 8 Card Counting Assistant */}
-            <div className="lg:col-span-2">
-              <BigRoad
+              {/* 龙猫双独立算牌系统 (左右区分: 左侧龙7, 右侧熊猫8, iPad横竖屏全幅展开直接可见) */}
+              <Dragon7Counter
                 handResults={handResults}
                 burnCard={burnCard}
                 burnedCount={burnedCount}
@@ -1341,6 +1333,27 @@ export default function App() {
                 onSetP8Bet={(amt) => setABet((prev) => ({ ...prev, panda8Amount: amt }))}
                 onUpdateP8Bankroll={setP8Bankroll}
                 onClearP8History={() => setP8History([])}
+              />
+            </div>
+
+            {/* Right ~40%: Big Road & Betting Console */}
+            <div className="lg:col-span-2 space-y-3 sm:space-y-4">
+              <BigRoad handResults={handResults} />
+
+              {/* 投注操作台 (对调至右侧，紧随大路走势，包含庄闲主注、筹码、开牌DEAL及结算横幅) */}
+              <BettingConsole
+                isDealing={isDealing}
+                aBet={aBet}
+                bBet={getBotBet(bState, aBankroll === 0 ? settings.bPostExhaustionChaseBet : settings.bChaseBet, aBet.mainBet)}
+                aBankroll={aBankroll}
+                enableSideBets={settings.aEnableSideBets}
+                sideBetAmount={settings.sideBetAmount}
+                lastHandResult={lastHandResult}
+                onDeal={handleDealNextHand}
+                onUpdateBet={setABet}
+                onNewShoe={handleNewShoe}
+                onResetSession={handleResetSession}
+                onOpenSettings={() => setIsSettingsOpen(true)}
               />
             </div>
           </div>
