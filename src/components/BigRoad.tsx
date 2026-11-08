@@ -122,7 +122,7 @@ export const BigRoad: React.FC<BigRoadProps> = ({
                 activeTab === 'dragon7' ? 'bg-[#d4af37] text-black shadow' : 'text-amber-200/70 hover:text-white'
               }`}
             >
-              <span>🐉 龙7算牌</span>
+              <span>🐉 龙7 &amp; 🐼 猫8 算牌</span>
             </button>
             <button
               type="button"
