@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { TableFelt } from './components/TableFelt';
 import { Dragon7Counter } from './components/Dragon7Counter';
 import { BettingConsole } from './components/BettingConsole';
+import { HandHistoryLog } from './components/HandHistoryLog';
 import { PlayerBStatus } from './components/PlayerBStatus';
 import { BigRoad } from './components/BigRoad';
 import { StatsPanel } from './components/StatsPanel';
@@ -1336,11 +1337,12 @@ export default function App() {
               />
             </div>
 
-            {/* Right ~40%: Big Road & Betting Console */}
+            {/* Right ~40%: Big Road, Player A Betting Console & Hand History Log */}
             <div className="lg:col-span-2 space-y-3 sm:space-y-4">
+              {/* 大路走势 */}
               <BigRoad handResults={handResults} />
 
-              {/* 投注操作台 (对调至右侧，紧随大路走势，包含庄闲主注、筹码、开牌DEAL及结算横幅) */}
+              {/* 玩家A 投注操作台 (紧随大路下方，方便即时下注与点击开牌) */}
               <BettingConsole
                 isDealing={isDealing}
                 aBet={aBet}
@@ -1355,6 +1357,9 @@ export default function App() {
                 onResetSession={handleResetSession}
                 onOpenSettings={() => setIsSettingsOpen(true)}
               />
+
+              {/* 逐笔开牌明细记录 (置于操作台下方，可一键折叠/展开，便于操作) */}
+              <HandHistoryLog handResults={handResults} />
             </div>
           </div>
 
