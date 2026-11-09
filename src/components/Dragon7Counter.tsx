@@ -126,24 +126,24 @@ export const Dragon7Counter: React.FC<Dragon7CounterProps> = ({
   const isP8AdvantageZone = p8TCDetails.tc >= p8Settings.threshold;
 
   return (
-    <div className="bg-[#051a0b]/95 border-2 border-[#b8860b]/40 rounded-2xl p-3 sm:p-4 shadow-2xl backdrop-blur-md font-sans text-xs text-[#d4af37]">
+    <div className="bg-[#051a0b]/95 border-2 border-[#b8860b]/40 rounded-xl p-2 sm:p-2.5 shadow-2xl backdrop-blur-md font-sans text-xs text-[#d4af37]">
       {/* Top Header Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-2 pb-3 mb-3 border-b border-[#b8860b]/30">
+      <div className="flex flex-wrap items-center justify-between gap-1.5 pb-1.5 mb-2 border-b border-[#b8860b]/30">
         <div className="flex items-center space-x-2">
-          <div className="flex items-center space-x-1 text-xl sm:text-2xl">
+          <div className="flex items-center space-x-1 text-lg sm:text-xl">
             <span>🐉</span>
-            <span className="text-sm text-amber-200/50">✕</span>
+            <span className="text-xs text-amber-200/50">✕</span>
             <span>🐼</span>
           </div>
           <div>
-            <h3 className="font-serif-casino font-bold text-sm sm:text-base text-[#d4af37] flex items-center gap-2">
+            <h3 className="font-serif-casino font-bold text-xs sm:text-sm text-[#d4af37] flex items-center gap-1.5">
               <span>百家乐「龙7 &amp; 熊猫8」双侧注实时算牌系统</span>
-              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-500/40">
-                双通道并行运行中
+              <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-500/40">
+                双通道并行
               </span>
             </h3>
-            <span className="text-[10px] text-amber-200/60 block">
-              左右两侧同时进行独立计数、真数推导、优势判定与自动化下注
+            <span className="text-[9px] text-amber-200/60 block">
+              左右两侧独立计数、真数推导、优势判定与自动化下注
             </span>
           </div>
         </div>
@@ -156,10 +156,10 @@ export const Dragon7Counter: React.FC<Dragon7CounterProps> = ({
               setHistoryTab('dragon7');
               setShowHistoryModal(true);
             }}
-            className="px-2.5 py-1 rounded-lg text-[11px] font-bold border border-[#b8860b]/40 bg-black/60 text-amber-200 hover:bg-black/90 transition-all cursor-pointer flex items-center gap-1 shadow-sm"
+            className="px-2 py-0.5 rounded-lg text-[10px] sm:text-[11px] font-bold border border-[#b8860b]/40 bg-black/60 text-amber-200 hover:bg-black/90 transition-all cursor-pointer flex items-center gap-1 shadow-sm"
           >
             <span>📜</span>
-            <span>投注历史明细 (龙7: {d7History.length} / 猫8: {p8History.length})</span>
+            <span>投注记录 (龙7:{d7History.length} / 猫8:{p8History.length})</span>
           </button>
         </div>
       </div>
@@ -168,11 +168,11 @@ export const Dragon7Counter: React.FC<Dragon7CounterProps> = ({
       {/* MAIN TWO-COLUMN SIMULTANEOUS LAYOUT                                       */}
       {/* ========================================================================= */}
       {/* Dual Counting System Container: Left Dragon 7, Right Panda 8 (Side-by-side on iPad/Desktop) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-2.5">
         {/* ======================================================================= */}
         {/* LEFT COLUMN: 🐉 DRAGON 7 (龙7) 算牌系统                                 */}
         {/* ======================================================================= */}
-        <div className="bg-gradient-to-b from-amber-950/40 via-black/70 to-black/80 rounded-xl p-3 border border-amber-500/30 flex flex-col justify-between space-y-3 shadow-lg">
+        <div className="bg-gradient-to-b from-amber-950/40 via-black/70 to-black/80 rounded-xl p-2 sm:p-2.5 border border-amber-500/30 flex flex-col justify-between space-y-2 shadow-lg">
           {/* Column Header */}
           <div className="flex items-center justify-between pb-1.5 border-b border-amber-500/20">
             <div className="flex items-center space-x-2">
@@ -533,7 +533,7 @@ export const Dragon7Counter: React.FC<Dragon7CounterProps> = ({
         {/* ======================================================================= */}
         {/* RIGHT COLUMN: 🐼 PANDA 8 (熊猫8) 算牌系统                                */}
         {/* ======================================================================= */}
-        <div className="bg-gradient-to-b from-blue-950/40 via-black/70 to-black/80 rounded-xl p-3 border border-blue-500/30 flex flex-col justify-between space-y-3 shadow-lg">
+        <div className="bg-gradient-to-b from-blue-950/40 via-black/70 to-black/80 rounded-xl p-2 sm:p-2.5 border border-blue-500/30 flex flex-col justify-between space-y-2 shadow-lg">
           {/* Column Header */}
           <div className="flex items-center justify-between pb-1.5 border-b border-blue-500/20">
             <div className="flex items-center space-x-2">

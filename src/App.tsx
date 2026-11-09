@@ -1237,14 +1237,14 @@ export default function App() {
   const lastHandResult = handResults.length > 0 ? handResults[handResults.length - 1] : null;
 
   return (
-    <div className="min-h-screen bg-[#051a0b] text-[#d4af37] p-2 sm:p-4 md:p-6 font-serif-casino selection:bg-[#b8860b] selection:text-black">
-      <div className="max-w-7xl mx-auto space-y-4 md:space-y-6">
+    <div className="min-h-screen bg-[#051a0b] text-[#d4af37] p-1.5 sm:p-2.5 md:p-3 font-serif-casino selection:bg-[#b8860b] selection:text-black">
+      <div className="max-w-7xl mx-auto space-y-2.5 sm:space-y-3.5">
         {/* Top Casino Header Bar */}
-        <header className="flex flex-wrap justify-between items-center px-4 sm:px-6 py-2.5 bg-black/60 border-b border-[#b8860b]/40 rounded-xl shadow-2xl backdrop-blur-md gap-3">
-          <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs">
+        <header className="flex flex-wrap justify-between items-center px-3 sm:px-4 py-1.5 bg-black/60 border-b border-[#b8860b]/40 rounded-xl shadow-2xl backdrop-blur-md gap-2">
+          <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 text-xs">
             <div className="flex items-center space-x-2">
               <span className="text-xl">🎰</span>
-              <h1 className="text-base sm:text-lg font-black font-serif-casino text-[#d4af37] tracking-wider text-shadow-gold">
+              <h1 className="text-sm sm:text-base font-black font-serif-casino text-[#d4af37] tracking-wider text-shadow-gold">
                 传统百家乐多对家追打系统
               </h1>
             </div>
@@ -1258,12 +1258,12 @@ export default function App() {
             </span>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs font-sans">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs font-sans">
             {/* Quick Reset Mode Switcher */}
             <button
               type="button"
               onClick={handleToggleResetMode}
-              className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-all shadow-md active:scale-95 cursor-pointer flex items-center gap-1.5 border ${
+              className={`px-2 py-1 rounded-lg text-[10px] sm:text-[11px] font-bold transition-all shadow-md active:scale-95 cursor-pointer flex items-center gap-1 border ${
                 settings.botTakeProfitResetMode === 'CUMULATIVE'
                   ? 'bg-amber-500/20 text-amber-300 border-amber-500/60 hover:bg-amber-500/30 shadow-[0_0_10px_rgba(245,158,11,0.2)]'
                   : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/60 hover:bg-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.2)]'
@@ -1271,17 +1271,17 @@ export default function App() {
               title="点击直接切换止盈重置模式：单靴独立重置 vs 跨靴累计追亏"
             >
               <span className={settings.botTakeProfitResetMode === 'CUMULATIVE' ? 'text-amber-400' : 'text-emerald-400'}>●</span>
-              <span>{settings.botTakeProfitResetMode === 'CUMULATIVE' ? '跨靴累计追亏 (点击切换)' : '单靴独立重置 (点击切换)'}</span>
+              <span>{settings.botTakeProfitResetMode === 'CUMULATIVE' ? '跨靴累计追亏' : '单靴独立重置'}</span>
             </button>
 
-            <div className="flex items-center gap-1.5 bg-black/50 px-2.5 py-1.5 rounded-lg border border-emerald-500/30">
+            <div className="flex items-center gap-1 bg-black/50 px-2 py-1 rounded-lg border border-emerald-500/30">
               <span className="text-emerald-400/80 font-serif italic text-[11px]">玩家A:</span>
-              <span className="text-emerald-400 font-bold font-mono text-sm">¥{aBankroll.toLocaleString()}</span>
+              <span className="text-emerald-400 font-bold font-mono text-xs sm:text-sm">¥{aBankroll.toLocaleString()}</span>
             </div>
             <button
               type="button"
               onClick={() => setIsSettingsOpen(true)}
-              className="bg-[#b8860b] hover:bg-yellow-500 text-black px-3 py-1.5 rounded font-bold text-[11px] uppercase tracking-wider transition-all shadow-md active:scale-95 cursor-pointer"
+              className="bg-[#b8860b] hover:bg-yellow-500 text-black px-2.5 py-1 rounded font-bold text-[11px] uppercase tracking-wider transition-all shadow-md active:scale-95 cursor-pointer"
             >
               ⚙️ 设置
             </button>
@@ -1289,11 +1289,11 @@ export default function App() {
         </header>
 
         {/* Main Screen Layout */}
-        <div className="space-y-4 md:space-y-5">
+        <div className="space-y-2.5 sm:space-y-3.5">
           {/* iPad & Desktop Top Screen Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 md:gap-5 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-2.5 sm:gap-3.5 items-start">
             {/* Left ~60%: Main Gaming Table Felt & Dragon-Panda Dual Counter (左右区分) */}
-            <div className="lg:col-span-3 space-y-3 sm:space-y-4">
+            <div className="lg:col-span-3 space-y-2 sm:space-y-2.5">
               <TableFelt
                 playerCards={playerCards}
                 bankerCards={bankerCards}
@@ -1338,7 +1338,7 @@ export default function App() {
             </div>
 
             {/* Right ~40%: Big Road, Player A Betting Console & Hand History Log */}
-            <div className="lg:col-span-2 space-y-3 sm:space-y-4">
+            <div className="lg:col-span-2 space-y-2 sm:space-y-2.5">
               {/* 大路走势 */}
               <BigRoad handResults={handResults} />
 
